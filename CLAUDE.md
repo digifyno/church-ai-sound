@@ -24,7 +24,7 @@ python3 monitor.py              # Terminal meter display
 
 Requires `.env` with `ANTHROPIC_API_KEY` and `FLASK_SECRET_KEY` (see `.env.example`). Install deps:
 ```bash
-pip3 install flask flask-socketio anthropic sounddevice numpy python-dotenv
+pip3 install -r requirements.txt
 ```
 
 ## Architecture
