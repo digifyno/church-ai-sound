@@ -174,7 +174,13 @@ class AIEngine:
                 channels = self._get_channels()
                 room     = self._get_room()
                 sim      = self._get_sim()
-                text     = self._analyze(channels, room, sim)
+
+                active_count = sum(1 for c in channels.values() if c.get('active', False))
+                if active_count == 0:
+                    time.sleep(ANALYSIS_INTERVAL)
+                    continue
+
+                text = self._analyze(channels, room, sim)
                 with self._lock:
                     self._suggestion = text
             except Exception as e:
