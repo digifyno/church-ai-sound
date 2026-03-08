@@ -51,13 +51,16 @@ class MixerEngine:
 
     @staticmethod
     def _detect_scene(snapshot: dict) -> str:
-        def any_active(*channels):
-            return any(snapshot.get(ch, {}).get("active", False) for ch in channels)
+        def role_active(role):
+            return any(
+                snapshot.get(ch, {}).get("active", False)
+                for ch, r in CHANNEL_ROLES.items() if r == role
+            )
 
-        vocals      = any_active(1, 2, 3, 4)
-        guitars     = any_active(5, 6)
-        keys        = any_active(7, 8)
-        playback    = any_active(15, 16)
+        vocals      = role_active("vocal") or role_active("backup")
+        guitars     = role_active("guitar")
+        keys        = role_active("keys")
+        playback    = role_active("playback")
         instruments = sum([guitars, keys, playback])
 
         if vocals and instruments >= 2:
