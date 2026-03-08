@@ -23,8 +23,7 @@ BLOCK_SIZE = 4096   # ~85 ms at 48 kHz
 
 class RoomMic:
     def __init__(self):
-        self._stream    = None
-        self._available = False
+        self._stream = None
         self._lock = threading.Lock()
         self._state = {
             "db":              -90.0,
@@ -46,12 +45,10 @@ class RoomMic:
                 callback=self._callback,
             )
             self._stream.start()
-            self._available = True
             with self._lock:
                 self._state['available'] = True
         except Exception as e:
             log.warning("Room mic unavailable: %s", e)
-            self._available = False
             with self._lock:
                 self._state['error'] = str(e)
 
@@ -106,4 +103,5 @@ class RoomMic:
                 "peak_db":         round(self._peak_db, 1),
                 "dominant_freqs":  dominant,
                 "speech_detected": speech,
+                "available":       True,
             }
