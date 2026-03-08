@@ -10,8 +10,11 @@ The core logic:
   proposed     = fader_db + clamp(error, ±MAX_STEP_DB)
 """
 
+import logging
 import threading
 import time
+
+log = logging.getLogger(__name__)
 
 from config import CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB
 from osc import fader_to_db, db_to_fader, compute_adjustment
@@ -126,6 +129,6 @@ class MixerEngine:
                     self._scene      = scene
                     self._mix_health = health
             except Exception:
-                pass
+                log.exception("simulation loop error")
 
             time.sleep(2.0)

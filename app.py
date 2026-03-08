@@ -8,6 +8,14 @@ Church AI Sound Technician — Web Dashboard
 from dotenv import load_dotenv
 load_dotenv()
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger(__name__)
+
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 import threading
@@ -26,7 +34,7 @@ import os, secrets as _secrets
 _secret = os.environ.get("FLASK_SECRET_KEY", "")
 if not _secret:
     _secret = _secrets.token_hex(32)
-    print("WARNING: FLASK_SECRET_KEY not set — using a random key (sessions won't persist across restarts)")
+    log.warning("FLASK_SECRET_KEY not set — using a random key (sessions won't persist across restarts)")
 app.config["SECRET_KEY"] = _secret
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
@@ -64,7 +72,7 @@ def push_loop():
                 "time":       time.strftime("%H:%M:%S"),
             })
         except Exception:
-            pass
+            log.exception("push_loop error")
         time.sleep(0.15)
 
 

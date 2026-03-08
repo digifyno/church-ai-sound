@@ -3,11 +3,14 @@ AI analysis engine — periodically asks Claude to assess the mix
 and provide one actionable suggestion.  Logs every request with cost.
 """
 
+import logging
 import os
 import time
 import threading
 import json
 from datetime import datetime
+
+log = logging.getLogger(__name__)
 
 ANALYSIS_INTERVAL = 15  # seconds
 LOG_FILE = "ai_log.jsonl"
@@ -68,7 +71,7 @@ class AIEngine:
             with open(LOG_FILE, "a") as f:
                 f.write(json.dumps(entry) + "\n")
         except Exception:
-            pass
+            log.warning("Failed to write AI log entry", exc_info=True)
 
     def _analyze(self, channels: dict, room: dict, sim: dict) -> str:
         active  = [(ch, i) for ch, i in channels.items() if i["active"]]

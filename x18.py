@@ -11,9 +11,12 @@ Read-only by default.  Nothing is sent unless the caller explicitly
 calls send().
 """
 
+import logging
 import socket
 import threading
 import time
+
+log = logging.getLogger(__name__)
 
 from config import MIXER_IP, MIXER_PORT
 from osc import build_message, parse_message, parse_meter_blob, fader_to_db
@@ -210,4 +213,4 @@ class X18Client:
                     if now - self._last_rx > 8:
                         self._connected = False
             except Exception:
-                pass
+                log.exception("_run receive error")

@@ -3,9 +3,12 @@ Shared OSC encoding/decoding for X-AIR protocol.
 Used by both x18.py and mixer_engine.py.
 """
 
+import logging
 import struct
 
 from config import MAX_STEP_DB
+
+log = logging.getLogger(__name__)
 
 
 def encode_str(s: str) -> bytes:
@@ -54,6 +57,7 @@ def parse_message(data: bytes):
                 o += size + (4 - size % 4) % 4
         return addr, vals
     except Exception:
+        log.debug("OSC parse error", exc_info=True)
         return None, []
 
 
