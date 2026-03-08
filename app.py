@@ -36,7 +36,7 @@ if not _secret:
     _secret = _secrets.token_hex(32)
     log.warning("FLASK_SECRET_KEY not set — using a random key (sessions won't persist across restarts)")
 app.config["SECRET_KEY"] = _secret
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 x18    = X18Client()
 mic    = RoomMic()
@@ -106,5 +106,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=WEB_PORT,
         debug=False,
-        allow_unsafe_werkzeug=True,
     )
