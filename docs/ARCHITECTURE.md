@@ -38,7 +38,7 @@ adjust faders to maintain optimal sound.
 ## File Structure
 
 ```
-Behringer_Test/
+.
 ├── app.py              # Flask + SocketIO web server
 ├── x18.py              # X-AIR X18 OSC client (meters, faders, read/write)
 ├── osc.py              # Shared OSC encode/decode + fader taper curves

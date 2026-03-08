@@ -17,10 +17,23 @@ python3 app.py                  # → http://localhost:5050
 # Live auto-mix (writes faders, Ctrl+C restores backup)
 python3 automix.py
 
-# Diagnostics
-python3 read_x18.py             # Query mixer info
-python3 monitor.py              # Terminal meter display
+# Diagnostics (TODO: not yet implemented)
+# python3 read_x18.py           # Query mixer info
+# python3 monitor.py            # Terminal meter display
 ```
+
+## Testing
+
+```bash
+pytest tests/          # run all unit tests
+pytest tests/ -v       # verbose output
+```
+
+Coverage:
+- `tests/test_osc.py` — fader taper math, OSC message roundtrips, `compute_adjustment`
+- `tests/test_mixer_engine.py` — scene detection, health score, simulation proposals
+
+Safety-critical paths tested: fader ceiling enforcement, hold-zone logic, runaway detection.
 
 Requires `.env` with `ANTHROPIC_API_KEY` and `FLASK_SECRET_KEY` (see `.env.example`). Install deps:
 ```bash
@@ -67,7 +80,7 @@ Room mic → room_mic.py ──→ app.py (push_loop, 7Hz SocketIO) → browser
 engine (`mixer_engine.py`) computes proposals but never sends OSC.
 
 When writing live fader changes:
-1. Always save backup first (`automix.save_backup`)
+1. Always save backup first (`save_backup(client)` in automix.py)
 2. Cap adjustments at ±2 dB per cycle (`MAX_STEP_DB` in config)
 3. Never push faders above 0 dB
 4. Restore on exit (signal handler)
