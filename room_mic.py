@@ -8,6 +8,7 @@ Captures ambient audio via the system mic and extracts:
  - Speech detection heuristic
 """
 
+import logging
 import numpy as np
 import sounddevice as sd
 import threading
@@ -15,31 +16,44 @@ import time
 
 from config import MIC_DEVICE, SAMPLE_RATE
 
+log = logging.getLogger(__name__)
+
 BLOCK_SIZE = 4096   # ~85 ms at 48 kHz
 
 
 class RoomMic:
     def __init__(self):
-        self._stream = None
+        self._stream    = None
+        self._available = False
         self._lock = threading.Lock()
         self._state = {
             "db":              -90.0,
             "peak_db":         -90.0,
             "dominant_freqs":  [],
             "speech_detected": False,
+            "available":       False,
         }
         self._peak_db   = -90.0
         self._last_time = time.time()
 
     def start(self):
-        self._stream = sd.InputStream(
-            device=MIC_DEVICE,
-            channels=1,
-            samplerate=SAMPLE_RATE,
-            blocksize=BLOCK_SIZE,
-            callback=self._callback,
-        )
-        self._stream.start()
+        try:
+            self._stream = sd.InputStream(
+                device=MIC_DEVICE,
+                channels=1,
+                samplerate=SAMPLE_RATE,
+                blocksize=BLOCK_SIZE,
+                callback=self._callback,
+            )
+            self._stream.start()
+            self._available = True
+            with self._lock:
+                self._state['available'] = True
+        except Exception as e:
+            log.warning("Room mic unavailable: %s", e)
+            self._available = False
+            with self._lock:
+                self._state['error'] = str(e)
 
     def stop(self):
         if self._stream:

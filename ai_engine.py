@@ -104,14 +104,15 @@ class AIEngine:
         for ch, i in silent:
             prompt.append(f"  CH{ch} {i['name']}")
 
-        prompt.append("")
-        prompt.append(
-            f"ROOM MIC: {room['db']} dB  "
-            f"Peak: {room['peak_db']} dB  "
-            f"Speech: {room['speech_detected']}"
-        )
-        if room["dominant_freqs"]:
-            prompt.append(f"Room dominant freqs: {room['dominant_freqs']} Hz")
+        if room.get('available', True):
+            prompt.append("")
+            prompt.append(
+                f"ROOM MIC: {room['db']} dB  "
+                f"Peak: {room['peak_db']} dB  "
+                f"Speech: {room['speech_detected']}"
+            )
+            if room.get("dominant_freqs"):
+                prompt.append(f"Room dominant freqs: {room['dominant_freqs']} Hz")
 
         if props:
             adjustments = [

@@ -341,8 +341,21 @@ function scene(d) {
 }
 
 function room(r) {
-  const db = r.db, p = pct(db);
+  const avail = r.available !== false;
   const el = $("r-db");
+  if (!avail) {
+    el.textContent = "Unavailable";
+    el.className = "room-db";
+    el.style.color = "var(--muted)";
+    $("r-bar").style.width = "0%";
+    const sp = $("sp");
+    sp.textContent = "NO MIC";
+    sp.className = "sp off";
+    $("freqs").innerHTML = r.error ? `<span class="ftag" title="${r.error}">mic error</span>` : "";
+    return;
+  }
+  el.style.color = "";
+  const db = r.db, p = pct(db);
   el.textContent = db > -90 ? `${db.toFixed(1)} dB` : "— dB";
   el.className = `room-db ${db>-6?"loud":db>-18?"hot":"ok"}`;
   const bar = $("r-bar");
