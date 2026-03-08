@@ -113,59 +113,46 @@ class X18Client:
     def _send(self, msg: bytes):
         self._sock.sendto(msg, (MIXER_IP, MIXER_PORT))
 
-    def _query_float(self, address: str) -> float | None:
-        self._send(build_message(address))
+    def _query(self, sock: socket.socket, address: str, expected_type: str):
+        """Send a query on *sock* and return the first value matching expected_type."""
+        sock.sendto(build_message(address), (MIXER_IP, MIXER_PORT))
         try:
-            data, _ = self._sock.recvfrom(1024)
+            data, _ = sock.recvfrom(1024)
             _, vals = parse_message(data)
             for t, v in vals:
-                if t == "f":
-                    return v
-        except socket.timeout:
-            pass
-        return None
-
-    def _query_str(self, address: str) -> str | None:
-        self._send(build_message(address))
-        try:
-            data, _ = self._sock.recvfrom(1024)
-            _, vals = parse_message(data)
-            for t, v in vals:
-                if t == "s":
-                    return v
-        except socket.timeout:
-            pass
-        return None
-
-    def _query_int(self, address: str) -> int | None:
-        self._send(build_message(address))
-        try:
-            data, _ = self._sock.recvfrom(1024)
-            _, vals = parse_message(data)
-            for t, v in vals:
-                if t == "i":
+                if t == expected_type:
                     return v
         except socket.timeout:
             pass
         return None
 
     def _read_channel_meta(self):
-        """Read names, faders, and mutes for all 16 channels."""
-        names  = {}
-        faders = {}
-        mutes  = {}
-        for ch in range(1, 17):
-            prefix = f"/ch/{ch:02d}"
-            n = self._query_str(f"{prefix}/config/name")
-            if n is not None:
-                names[ch] = n
-            f = self._query_float(f"{prefix}/mix/fader")
-            if f is not None:
-                faders[ch] = f
-            m = self._query_int(f"{prefix}/mix/on")
-            if m is not None:
-                mutes[ch] = (m == 1)
-            time.sleep(0.015)   # ~240ms total, gentle on the mixer
+        """Read names, faders, and mutes for all 16 channels.
+
+        Uses a dedicated ephemeral socket so that _run's recvfrom on
+        self._sock is the sole consumer of meter blobs — no packet stealing.
+        """
+        q_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        q_sock.bind(("", 0))
+        q_sock.settimeout(0.5)
+        try:
+            names  = {}
+            faders = {}
+            mutes  = {}
+            for ch in range(1, 17):
+                prefix = f"/ch/{ch:02d}"
+                n = self._query(q_sock, f"{prefix}/config/name", "s")
+                if n is not None:
+                    names[ch] = n
+                f = self._query(q_sock, f"{prefix}/mix/fader", "f")
+                if f is not None:
+                    faders[ch] = f
+                m = self._query(q_sock, f"{prefix}/mix/on", "i")
+                if m is not None:
+                    mutes[ch] = (m == 1)
+                time.sleep(0.015)   # ~240ms total, gentle on the mixer
+        finally:
+            q_sock.close()
         with self._lock:
             self._names.update(names)
             self._faders.update(faders)
