@@ -1,8 +1,0 @@
-#!/var/lib/rsi/worktrees/439bf606-27a3-40de-96c0-e146b5bd991d/worker-d910f03c/venv/bin/python3
-# -*- coding: utf-8 -*-
-import re
-import sys
-from httpx import main
-if __name__ == '__main__':
-    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
-    sys.exit(main())

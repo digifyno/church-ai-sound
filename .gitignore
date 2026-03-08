@@ -2,3 +2,4 @@ fader_backup.json
 .env
 __pycache__/
 ai_log.jsonl
+venv/

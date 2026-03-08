@@ -28,6 +28,7 @@ logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
     datefmt="%H:%M:%S",
 )
+log = logging.getLogger(__name__)
 
 from config import (CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB,
                     MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB,
@@ -183,7 +184,19 @@ def main():
     input_history: dict[int, list] = {}
     while True:
         cycle += 1
-        actions = auto_mix_step(x, consecutive_raises, input_history)
+
+        if not x.connected:
+            log.warning("Mixer offline — skipping cycle %d", cycle)
+            time.sleep(CYCLE_SEC)
+            continue
+
+        try:
+            actions = auto_mix_step(x, consecutive_raises, input_history)
+        except Exception:
+            log.exception("auto_mix_step failed — skipping cycle %d", cycle)
+            time.sleep(CYCLE_SEC)
+            continue
+
         ts = time.strftime("%H:%M:%S")
         if actions:
             print(f"[{ts}] Cycle {cycle} — {len(actions)} adjustment(s):")
