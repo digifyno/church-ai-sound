@@ -1,0 +1,182 @@
+"""
+AI analysis engine — periodically asks Claude to assess the mix
+and provide one actionable suggestion.  Logs every request with cost.
+"""
+
+import os
+import time
+import threading
+import json
+from datetime import datetime
+
+ANALYSIS_INTERVAL = 15  # seconds
+LOG_FILE = "ai_log.jsonl"
+
+# Haiku 4.5 pricing (per million tokens)
+PRICE_INPUT  = 0.80   # $0.80 / 1M input tokens
+PRICE_OUTPUT = 4.00   # $4.00 / 1M output tokens
+
+
+class AIEngine:
+    def __init__(self, get_channels, get_room, get_sim):
+        self._get_channels = get_channels
+        self._get_room     = get_room
+        self._get_sim      = get_sim
+        self._suggestion   = "Waiting for first analysis..."
+        self._lock         = threading.Lock()
+        self._running      = False
+        self._thread       = None
+        self._client       = None
+
+        # Cumulative stats
+        self._total_requests     = 0
+        self._total_input_tokens = 0
+        self._total_output_tokens = 0
+        self._total_cost         = 0.0
+
+    def start(self):
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            with self._lock:
+                self._suggestion = "Set ANTHROPIC_API_KEY to enable AI suggestions."
+            return
+
+        import anthropic
+        self._client = anthropic.Anthropic(api_key=api_key)
+        self._running = True
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self._running = False
+
+    def get_suggestion(self) -> str:
+        with self._lock:
+            return self._suggestion
+
+    def get_stats(self) -> dict:
+        with self._lock:
+            return {
+                "requests":      self._total_requests,
+                "input_tokens":  self._total_input_tokens,
+                "output_tokens": self._total_output_tokens,
+                "total_cost":    round(self._total_cost, 6),
+            }
+
+    def _log(self, entry: dict):
+        try:
+            with open(LOG_FILE, "a") as f:
+                f.write(json.dumps(entry) + "\n")
+        except Exception:
+            pass
+
+    def _analyze(self, channels: dict, room: dict, sim: dict) -> str:
+        active  = [(ch, i) for ch, i in channels.items() if i["active"]]
+        silent  = [(ch, i) for ch, i in channels.items() if not i["active"]]
+        props   = sim.get("proposals", {})
+
+        prompt = []
+        prompt.append(
+            "You are an expert AI church sound technician. "
+            "Analyze the live mixer state below and give ONE short, practical "
+            "suggestion (max 2 sentences). Be specific with channel names and dB values. "
+            "Consider the room microphone level when assessing overall volume."
+        )
+        prompt.append("")
+        prompt.append(f"DETECTED SCENE: {sim.get('scene', 'Unknown')}")
+        prompt.append(f"MIX HEALTH: {sim.get('mix_health', '?')}%")
+        prompt.append("")
+
+        prompt.append("ACTIVE CHANNELS:")
+        for ch, i in active:
+            fader_info = f"fader={i['fader_db']}dB"
+            role = props.get(ch, {}).get("role", "?")
+            output = props.get(ch, {}).get("output_db", "?")
+            target = props.get(ch, {}).get("target_db", "?")
+            prompt.append(
+                f"  CH{ch} {i['name']} [{role}]: "
+                f"input={i['db']}dB  {fader_info}  "
+                f"output~{output}dB  target={target}dB"
+            )
+
+        prompt.append("")
+        prompt.append("SILENT CHANNELS:")
+        for ch, i in silent:
+            prompt.append(f"  CH{ch} {i['name']}")
+
+        prompt.append("")
+        prompt.append(
+            f"ROOM MIC: {room['db']} dB  "
+            f"Peak: {room['peak_db']} dB  "
+            f"Speech: {room['speech_detected']}"
+        )
+        if room["dominant_freqs"]:
+            prompt.append(f"Room dominant freqs: {room['dominant_freqs']} Hz")
+
+        if props:
+            adjustments = [
+                f"  {p['name']}: {p['action']} {p['delta_db']:+.1f} dB"
+                for p in props.values() if p["action"] != "hold"
+            ]
+            if adjustments:
+                prompt.append("")
+                prompt.append("PROPOSED ADJUSTMENTS (simulation):")
+                prompt.extend(adjustments)
+
+        prompt_text = "\n".join(prompt)
+
+        try:
+            t0 = time.time()
+            resp = self._client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=150,
+                messages=[{"role": "user", "content": prompt_text}],
+            )
+            elapsed = time.time() - t0
+
+            answer       = resp.content[0].text.strip()
+            input_tokens = resp.usage.input_tokens
+            output_tokens = resp.usage.output_tokens
+            cost = (input_tokens * PRICE_INPUT + output_tokens * PRICE_OUTPUT) / 1_000_000
+
+            with self._lock:
+                self._total_requests      += 1
+                self._total_input_tokens  += input_tokens
+                self._total_output_tokens += output_tokens
+                self._total_cost          += cost
+
+            self._log({
+                "ts":             datetime.now().isoformat(),
+                "model":          "claude-haiku-4-5-20251001",
+                "input_tokens":   input_tokens,
+                "output_tokens":  output_tokens,
+                "cost_usd":       round(cost, 6),
+                "cumulative_usd": round(self._total_cost, 6),
+                "elapsed_s":      round(elapsed, 2),
+                "prompt":         prompt_text,
+                "response":       answer,
+                "scene":          sim.get("scene", ""),
+            })
+
+            return answer
+
+        except Exception as e:
+            self._log({
+                "ts":    datetime.now().isoformat(),
+                "error": str(e),
+            })
+            return f"AI error: {e}"
+
+    def _loop(self):
+        while self._running:
+            try:
+                channels = self._get_channels()
+                room     = self._get_room()
+                sim      = self._get_sim()
+                text     = self._analyze(channels, room, sim)
+                with self._lock:
+                    self._suggestion = text
+            except Exception as e:
+                with self._lock:
+                    self._suggestion = f"Analysis error: {e}"
+            time.sleep(ANALYSIS_INTERVAL)

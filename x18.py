@@ -1,0 +1,218 @@
+"""
+X-AIR X18 OSC client.
+
+Provides:
+ - Real-time meter subscription (/meters/0, /meters/1)
+ - On-demand fader/name/mute reads
+ - Connection-status tracking
+ - Thread-safe snapshots for the rest of the app
+
+Read-only by default.  Nothing is sent unless the caller explicitly
+calls send().
+"""
+
+import socket
+import threading
+import time
+
+from config import MIXER_IP, MIXER_PORT
+from osc import build_message, parse_message, parse_meter_blob, fader_to_db
+
+
+class X18Client:
+    def __init__(self):
+        self._sock = None
+        self._running = False
+        self._thread = None
+        self._lock = threading.Lock()
+
+        # Meter data (dB, pre-fader)
+        self._meters_0 = {}          # ch1-8  from /meters/0
+        self._meters_1 = {}          # ch1-18 from /meters/1
+
+        # Channel metadata (read once on connect, refreshed periodically)
+        self._names  = {}            # ch -> str
+        self._faders = {}            # ch -> float (0.0–1.0)
+        self._mutes  = {}            # ch -> bool (True = signal flowing)
+
+        self._connected = False
+        self._last_rx   = 0.0        # last time we received anything
+
+    # ── lifecycle ──────────────────────────────────────────────────────
+
+    def start(self):
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._sock.bind(("", 0))     # OS picks a free port
+        self._sock.settimeout(0.5)
+        self._running = True
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self._running = False
+        if self._sock:
+            self._sock.close()
+
+    # ── public queries ─────────────────────────────────────────────────
+
+    @property
+    def connected(self) -> bool:
+        with self._lock:
+            return self._connected
+
+    # ── write commands ─────────────────────────────────────────────────
+
+    def set_fader(self, ch: int, value: float):
+        """Set fader position (0.0–1.0) for channel 1–16."""
+        value = max(0.0, min(1.0, value))
+        self._send(build_message(f"/ch/{ch:02d}/mix/fader", ("f", value)))
+        with self._lock:
+            self._faders[ch] = value
+
+    def set_fader_db(self, ch: int, db: float):
+        """Set fader by dB value (-90 to +10)."""
+        from osc import db_to_fader
+        self.set_fader(ch, db_to_fader(db))
+
+    def set_mute(self, ch: int, on: bool):
+        """Set channel on/off (True = signal flows, False = muted)."""
+        self._send(build_message(f"/ch/{ch:02d}/mix/on", ("i", 1 if on else 0)))
+        with self._lock:
+            self._mutes[ch] = on
+
+    def get_snapshot(self) -> dict:
+        """Return {ch_number: {name, db, fader, fader_db, on, active}}."""
+        with self._lock:
+            channels = {}
+            for ch in range(1, 19):
+                # Best meter source: /meters/0 for 1-8, /meters/1 for 9-18
+                if ch <= 8 and ch in self._meters_0:
+                    db = self._meters_0[ch]
+                elif ch in self._meters_1:
+                    db = self._meters_1[ch]
+                else:
+                    db = -90.0
+
+                fader_val = self._faders.get(ch, 0.0)
+                channels[ch] = {
+                    "name":     self._names.get(ch, f"CH{ch:02d}"),
+                    "db":       round(db, 1),
+                    "fader":    round(fader_val, 3),
+                    "fader_db": round(fader_to_db(fader_val), 1),
+                    "on":       self._mutes.get(ch, True),
+                    "active":   db > -55,
+                }
+            return channels
+
+    # ── internal ───────────────────────────────────────────────────────
+
+    def _send(self, msg: bytes):
+        self._sock.sendto(msg, (MIXER_IP, MIXER_PORT))
+
+    def _query_float(self, address: str) -> float | None:
+        self._send(build_message(address))
+        try:
+            data, _ = self._sock.recvfrom(1024)
+            _, vals = parse_message(data)
+            for t, v in vals:
+                if t == "f":
+                    return v
+        except socket.timeout:
+            pass
+        return None
+
+    def _query_str(self, address: str) -> str | None:
+        self._send(build_message(address))
+        try:
+            data, _ = self._sock.recvfrom(1024)
+            _, vals = parse_message(data)
+            for t, v in vals:
+                if t == "s":
+                    return v
+        except socket.timeout:
+            pass
+        return None
+
+    def _query_int(self, address: str) -> int | None:
+        self._send(build_message(address))
+        try:
+            data, _ = self._sock.recvfrom(1024)
+            _, vals = parse_message(data)
+            for t, v in vals:
+                if t == "i":
+                    return v
+        except socket.timeout:
+            pass
+        return None
+
+    def _read_channel_meta(self):
+        """Read names, faders, and mutes for all 16 channels."""
+        names  = {}
+        faders = {}
+        mutes  = {}
+        for ch in range(1, 17):
+            prefix = f"/ch/{ch:02d}"
+            n = self._query_str(f"{prefix}/config/name")
+            if n is not None:
+                names[ch] = n
+            f = self._query_float(f"{prefix}/mix/fader")
+            if f is not None:
+                faders[ch] = f
+            m = self._query_int(f"{prefix}/mix/on")
+            if m is not None:
+                mutes[ch] = (m == 1)
+            time.sleep(0.015)   # ~240ms total, gentle on the mixer
+        with self._lock:
+            self._names.update(names)
+            self._faders.update(faders)
+            self._mutes.update(mutes)
+
+    def _subscribe_meters(self):
+        for endpoint in ["/meters/0", "/meters/1"]:
+            self._send(build_message(endpoint, ("s", endpoint)))
+
+    def _run(self):
+        # Initial channel metadata read
+        self._read_channel_meta()
+
+        last_sub  = 0.0
+        last_meta = time.time()
+
+        while self._running:
+            now = time.time()
+
+            # Re-subscribe to meters every 5s (X-AIR requirement)
+            if now - last_sub > 5:
+                self._subscribe_meters()
+                last_sub = now
+
+            # Refresh faders/names every 30s
+            if now - last_meta > 30:
+                self._read_channel_meta()
+                last_meta = now
+
+            # Receive
+            try:
+                data, _ = self._sock.recvfrom(8192)
+                self._last_rx = now
+                addr, vals = parse_message(data)
+                if not addr or not vals:
+                    continue
+
+                if vals[0][0] == "b":
+                    blob   = vals[0][1]
+                    levels = parse_meter_blob(blob)
+                    with self._lock:
+                        self._connected = True
+                        if addr == "/meters/0":
+                            for i, db in enumerate(levels[:8]):
+                                self._meters_0[i+1] = db
+                        elif addr == "/meters/1":
+                            for i, db in enumerate(levels[:min(18, len(levels))]):
+                                self._meters_1[i+1] = db
+            except socket.timeout:
+                with self._lock:
+                    if now - self._last_rx > 8:
+                        self._connected = False
+            except Exception:
+                pass

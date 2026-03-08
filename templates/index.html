@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Church AI Sound — X18</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+:root {
+  --bg:#0c0e13; --surface:#13161e; --card:#1a1e2a; --border:#242a3a;
+  --accent:#4f8ef7; --green:#2ecc71; --yellow:#f1c40f; --red:#e74c3c;
+  --text:#e0e4f0; --muted:#4a5270; --sim-border:#3a5a30;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code','Menlo',monospace;font-size:13px}
+
+/* ── Header ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.logo-name{font-size:14px;font-weight:700}
+.logo-sub{font-size:10px;color:var(--muted)}
+.hdr-r{display:flex;align-items:center;gap:12px}
+.badge{padding:3px 8px;border-radius:16px;font-size:9px;font-weight:700;letter-spacing:.5px}
+.b-sim{background:#2a1f00;color:#f0a030;border:1px solid #5a4010}
+.b-conn{border:1px solid var(--border)}
+.b-conn.on{background:#0e2a18;color:var(--green);border-color:#1a4a28}
+.b-conn.off{background:#2a0e0e;color:var(--red);border-color:#4a1818;animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+#clock{color:var(--muted);font-size:11px}
+
+/* ── Alert ── */
+#alert{display:none;padding:7px 20px;background:#2a0e0e;border-bottom:1px solid var(--red);color:#ff8080;font-size:11px;font-weight:600}
+#alert.on{display:block}
+
+/* ── Scene bar ── */
+.scene-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 20px;background:#10131a;border-bottom:1px solid var(--border);font-size:10px}
+.scene-l{color:var(--muted)}
+#scene{color:var(--accent);font-weight:700;margin-left:6px}
+.health{display:flex;align-items:center;gap:6px}
+.h-bg{width:100px;height:5px;background:#1a1e28;border-radius:3px;overflow:hidden}
+.h-bar{height:100%;border-radius:3px;transition:width .4s}
+#h-lbl{font-size:10px}
+
+/* ── Layout ── */
+main{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 72px);overflow:hidden}
+
+/* ── Left: meters ── */
+.left{overflow-y:auto;padding:14px 16px;border-right:1px solid var(--border)}
+.stitle{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+
+/* Channel row */
+.cr{display:grid;grid-template-columns:24px 80px 1fr 44px 44px 40px;align-items:center;gap:6px;padding:6px 8px;margin-bottom:4px;background:var(--card);border-radius:6px;border:1px solid var(--border);transition:border-color .15s}
+.cr.active{border-color:#202e48}
+.cr.hot{border-color:#483800}
+.cr.clip{border-color:#481010}
+.cn{font-size:9px;color:var(--muted);text-align:center}
+.cname{font-size:11px;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cname.s{color:var(--muted);font-weight:400}
+
+/* Meter */
+.mw{position:relative;height:12px;background:#080a0f;border-radius:3px;overflow:hidden}
+.mb{height:100%;width:0%;border-radius:3px;transition:width .08s ease-out}
+.mw::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(90deg,transparent,transparent calc(25% - 1px),#141820 25%)}
+.green{background:linear-gradient(90deg,#1a6a30,var(--green))}
+.yellow{background:linear-gradient(90deg,#806000,var(--yellow))}
+.red{background:linear-gradient(90deg,#801010,var(--red))}
+
+.cdb{text-align:right;font-variant-numeric:tabular-nums;font-size:11px}
+.cdb.active{color:var(--green)} .cdb.hot{color:var(--yellow)} .cdb.clip{color:var(--red)} .cdb.s{color:var(--muted)}
+
+/* Fader column */
+.cfader{font-size:9px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.ctag{font-size:9px;font-weight:700;text-align:center;padding:2px 4px;border-radius:3px}
+.ctag.on{background:#0e2818;color:var(--green)}
+.ctag.s{background:#12161e;color:var(--muted)}
+.ctag.hot{background:#281c00;color:var(--yellow)}
+.ctag.clip{background:#280808;color:var(--red)}
+
+/* ── Sidebar ── */
+.side{overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px}
+
+/* ── Simulation ── */
+.sim{background:#0e1218;border:1px solid var(--sim-border);border-radius:8px;padding:12px}
+.sim-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sim-title{font-size:9px;font-weight:700;letter-spacing:1.5px;color:#80c060;text-transform:uppercase}
+.sim-note{font-size:8px;color:var(--muted);font-style:italic}
+
+.sr{display:grid;grid-template-columns:68px 1fr 36px;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #161e14}
+.sr:last-child{border-bottom:none}
+.sr-name{font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.sr-bar-wrap{position:relative;height:16px;background:#080a10;border-radius:3px;overflow:hidden}
+.sr-current{position:absolute;left:0;top:0;height:8px;border-radius:3px 3px 0 0;background:#3a4060;transition:width .3s}
+.sr-proposed{position:absolute;left:0;bottom:0;height:8px;border-radius:0 0 3px 3px;transition:width .3s}
+.sr-proposed.raise{background:#2a6030}
+.sr-proposed.lower{background:#604020}
+.sr-proposed.hold{background:#3a4060}
+.sr-target{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);opacity:.6}
+.sr-delta{font-size:9px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.sr-delta.pos{color:#80d080} .sr-delta.neg{color:#d08060} .sr-delta.zero{color:var(--muted)}
+.sim-empty{color:var(--muted);font-size:10px;text-align:center;padding:8px 0}
+
+/* ── AI ── */
+.ai{background:#0e1220;border:1px solid var(--accent);border-radius:8px;padding:12px;position:relative;overflow:hidden}
+.ai::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
+.ai-h{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 2s infinite}
+.ai-lbl{font-size:9px;color:var(--accent);font-weight:700;letter-spacing:1px}
+#ai-text{font-size:11px;line-height:1.6;min-height:44px}
+.ai-ts{font-size:9px;color:var(--muted);margin-top:6px}
+
+/* ── Room mic ── */
+.room-db{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin:4px 0}
+.room-db.ok{color:var(--green)} .room-db.hot{color:var(--yellow)} .room-db.loud{color:var(--red)}
+.r-bar-bg{height:6px;background:#080a0f;border-radius:3px;overflow:hidden;margin-bottom:6px}
+.r-bar{height:100%;width:0%;border-radius:3px;transition:width .1s}
+.sp{display:inline-block;padding:2px 7px;border-radius:14px;font-size:9px;font-weight:700}
+.sp.on{background:#0e2818;color:var(--green)} .sp.off{background:#12161e;color:var(--muted)}
+.freqs{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+.ftag{padding:2px 5px;border-radius:3px;font-size:9px;background:#2a1808;color:#e08040;border:1px solid #3a2010}
+
+/* ── Stats ── */
+.st{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px}
+.st:last-child{border-bottom:none}
+.stk{color:var(--muted)} .stv{font-variant-numeric:tabular-nums}
+
+@media(max-width:768px){main{grid-template-columns:1fr;height:auto}.cr{grid-template-columns:20px 60px 1fr 38px 38px 34px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🎚</div>
+    <div><div class="logo-name">Church AI Sound</div><div class="logo-sub">X-AIR X18</div></div>
+  </div>
+  <div class="hdr-r">
+    <span class="badge b-sim">SIMULATION</span>
+    <span class="badge b-conn off" id="conn">OFFLINE</span>
+    <span id="clock">--:--:--</span>
+  </div>
+</header>
+
+<div id="alert"></div>
+
+<div class="scene-bar">
+  <div><span class="scene-l">SCENE:</span><span id="scene">—</span></div>
+  <div class="health">
+    <span style="color:var(--muted)">HEALTH</span>
+    <div class="h-bg"><div class="h-bar green" id="h-bar"></div></div>
+    <span id="h-lbl">—</span>
+  </div>
+</div>
+
+<main>
+  <div class="left">
+    <div class="stitle">Live Channel Meters</div>
+    <div id="chs"></div>
+  </div>
+  <div class="side">
+
+    <div class="sim">
+      <div class="sim-hdr">
+        <div class="sim-title">AI Would Adjust</div>
+        <div class="sim-note">not applied</div>
+      </div>
+      <div id="sim"></div>
+    </div>
+
+    <div class="ai">
+      <div class="ai-h"><div class="ai-dot"></div><div class="ai-lbl">AI TECHNICIAN</div></div>
+      <div id="ai-text">Connecting...</div>
+      <div class="ai-ts" id="ai-ts"></div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
+        <span style="font-size:9px;color:var(--muted)">Requests: <span id="ai-req" style="color:var(--text)">0</span></span>
+        <span style="font-size:9px;color:var(--muted)">Tokens: <span id="ai-tok" style="color:var(--text)">0</span></span>
+        <span style="font-size:9px;color:var(--muted)">Cost: <span id="ai-cost" style="color:var(--yellow)">$0.000</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stitle">Room Microphone</div>
+      <div class="room-db ok" id="r-db">— dB</div>
+      <div class="r-bar-bg"><div class="r-bar green" id="r-bar"></div></div>
+      <span class="sp off" id="sp">SPEECH</span>
+      <div class="freqs" id="freqs"></div>
+    </div>
+
+    <div class="card">
+      <div class="stitle">Mix Summary</div>
+      <div class="st"><span class="stk">Active channels</span><span class="stv" id="sa">—</span></div>
+      <div class="st"><span class="stk">Loudest</span><span class="stv" id="sl">—</span></div>
+      <div class="st"><span class="stk">Quietest active</span><span class="stv" id="sq">—</span></div>
+      <div class="st"><span class="stk">Level spread</span><span class="stv" id="ss">—</span></div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+const S = io();
+let aiTs = null;
+
+S.on("state", d => {
+  $("clock").textContent = d.time;
+  conn(d.connected);
+  chs(d.channels);
+  sim(d.sim);
+  room(d.room);
+  if (d.suggestion) ai(d.suggestion, d.time);
+  if (d.ai_stats) aiStats(d.ai_stats);
+  if (d.sim) scene(d.sim);
+});
+
+function $(id) { return document.getElementById(id); }
+function pct(db) { return Math.max(0, Math.min(100, (db + 60) / 66 * 100)); }
+function bc(db)  { return db > -6 ? "red" : db > -18 ? "yellow" : "green"; }
+function st(db)  { return db <= -55 ? "s" : db > -6 ? "clip" : db > -18 ? "hot" : "active"; }
+
+function conn(ok) {
+  const el = $("conn");
+  el.textContent = ok ? "CONNECTED" : "OFFLINE";
+  el.className = `badge b-conn ${ok ? "on" : "off"}`;
+}
+
+function chs(data) {
+  const grid = $("chs");
+  const keys = Object.keys(data).map(Number).sort((a,b)=>a-b);
+  let act=0, loud={db:-999,n:""}, quiet={db:999,n:""};
+
+  keys.forEach(ch => {
+    const c = data[ch], db = c.db, s = st(db), p = pct(db);
+    const dbStr = s==="s" ? "—" : db.toFixed(1);
+    const faderStr = c.fader_db > -90 ? `${c.fader_db > 0 ? "+" : ""}${c.fader_db}` : "—";
+
+    if (s !== "s") {
+      act++;
+      if (db > loud.db) loud = {db, n: c.name};
+      if (db < quiet.db) quiet = {db, n: c.name};
+    }
+
+    let row = $(`r${ch}`);
+    if (!row) {
+      row = document.createElement("div");
+      row.id = `r${ch}`;
+      row.innerHTML = `
+        <div class="cn">${ch}</div>
+        <div class="cname" id="n${ch}">${c.name}</div>
+        <div class="mw"><div class="mb green" id="b${ch}"></div></div>
+        <div class="cdb s" id="d${ch}">—</div>
+        <div class="cfader" id="f${ch}">—</div>
+        <div class="ctag s" id="t${ch}">–</div>`;
+      row.className = "cr";
+      grid.appendChild(row);
+    }
+
+    row.className = `cr ${s==="s"?"":s}`;
+    $(`n${ch}`).className = `cname ${s==="s"?"s":""}`;
+    const bar = $(`b${ch}`);
+    bar.style.width = `${p}%`;
+    bar.className = `mb ${bc(db)}`;
+    const dEl = $(`d${ch}`);
+    dEl.textContent = dbStr;
+    dEl.className = `cdb ${s}`;
+    $(`f${ch}`).textContent = faderStr;
+    const tEl = $(`t${ch}`);
+    tEl.textContent = {s:"–",active:"ON",hot:"HOT",clip:"CLIP"}[s];
+    tEl.className = `ctag ${s==="active"?"on":s}`;
+  });
+
+  $("sa").textContent = act;
+  $("sl").textContent = loud.db > -999 ? `${loud.n} (${loud.db.toFixed(1)})` : "—";
+  $("sq").textContent = quiet.db < 999 && act > 1 ? `${quiet.n} (${quiet.db.toFixed(1)})` : "—";
+  if (act >= 2) {
+    const sp = loud.db - quiet.db;
+    const el = $("ss");
+    el.textContent = `${sp.toFixed(1)} dB`;
+    el.style.color = sp > 15 ? "var(--yellow)" : "var(--text)";
+  }
+
+  const clip = keys.filter(ch => data[ch].db > -3);
+  const ab = $("alert");
+  if (clip.length) {
+    ab.textContent = `⚠ HIGH SIGNAL: ${clip.map(ch=>data[ch].name).join(", ")} — check gain`;
+    ab.className = "on";
+  } else {
+    ab.className = "";
+  }
+}
+
+function sim(d) {
+  if (!d) return;
+  const props = d.proposals || {};
+  const keys = Object.keys(props).map(Number).sort((a,b)=>a-b);
+  const wrap = $("sim");
+
+  if (keys.length === 0) {
+    wrap.innerHTML = '<div class="sim-empty">No active channels</div>';
+    return;
+  }
+
+  let html = "";
+  keys.forEach(ch => {
+    const p = props[ch];
+    const sign = p.delta_db > 0 ? "+" : "";
+    const deltaStr = Math.abs(p.delta_db) < 0.1 ? "·" : `${sign}${p.delta_db}`;
+    const deltaCls = p.delta_db > 0.3 ? "pos" : p.delta_db < -0.3 ? "neg" : "zero";
+    const act = p.action;
+
+    // Bar widths: map -60..+10 dB to 0..100%
+    const curPct = Math.max(0, Math.min(100, (p.current_fader_db + 60) / 70 * 100));
+    const newPct = Math.max(0, Math.min(100, (p.proposed_fader_db + 60) / 70 * 100));
+    const tgtPct = Math.max(0, Math.min(100, (p.target_db + 60) / 70 * 100));
+
+    html += `
+      <div class="sr">
+        <div class="sr-name">${p.name}</div>
+        <div class="sr-bar-wrap">
+          <div class="sr-current" style="width:${curPct}%"></div>
+          <div class="sr-proposed ${act}" style="width:${newPct}%"></div>
+          <div class="sr-target" style="left:${tgtPct}%"></div>
+        </div>
+        <div class="sr-delta ${deltaCls}">${deltaStr}</div>
+      </div>`;
+  });
+
+  wrap.innerHTML = html;
+}
+
+function scene(d) {
+  $("scene").textContent = d.scene || "—";
+  const h = d.mix_health ?? 100;
+  const bar = $("h-bar");
+  bar.style.width = `${h}%`;
+  bar.className = `h-bar ${h>70?"green":h>40?"yellow":"red"}`;
+  const lbl = $("h-lbl");
+  lbl.textContent = `${h}%`;
+  lbl.style.color = h>70?"var(--green)":h>40?"var(--yellow)":"var(--red)";
+}
+
+function room(r) {
+  const db = r.db, p = pct(db);
+  const el = $("r-db");
+  el.textContent = db > -90 ? `${db.toFixed(1)} dB` : "— dB";
+  el.className = `room-db ${db>-6?"loud":db>-18?"hot":"ok"}`;
+  const bar = $("r-bar");
+  bar.style.width = `${p}%`;
+  bar.className = `r-bar ${bc(db)}`;
+  const sp = $("sp");
+  sp.textContent = r.speech_detected ? "SPEECH ●" : "SPEECH";
+  sp.className = `sp ${r.speech_detected?"on":"off"}`;
+  $("freqs").innerHTML = (r.dominant_freqs||[]).map(f=>`<span class="ftag">${f} Hz</span>`).join("");
+}
+
+function ai(text, time) {
+  const el = $("ai-text");
+  if (el.textContent !== text) {
+    el.textContent = text;
+    $("ai-ts").textContent = `Updated ${time}`;
+  }
+}
+
+function aiStats(s) {
+  $("ai-req").textContent = s.requests;
+  $("ai-tok").textContent = (s.input_tokens + s.output_tokens).toLocaleString();
+  $("ai-cost").textContent = `$${s.total_cost.toFixed(4)}`;
+}
+</script>
+</body>
+</html>
