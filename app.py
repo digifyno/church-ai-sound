@@ -22,7 +22,12 @@ from mixer_engine import MixerEngine
 from ai_engine import AIEngine
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "church-ai-sound"
+import os, secrets as _secrets
+_secret = os.environ.get("FLASK_SECRET_KEY", "")
+if not _secret:
+    _secret = _secrets.token_hex(32)
+    print("WARNING: FLASK_SECRET_KEY not set — using a random key (sessions won't persist across restarts)")
+app.config["SECRET_KEY"] = _secret
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 x18    = X18Client()
