@@ -38,6 +38,8 @@ class X18Client:
         self._connected = False
         self._last_rx   = 0.0        # last time we received anything
 
+        self._meta_thread = None
+
     # ── lifecycle ──────────────────────────────────────────────────────
 
     def start(self):
@@ -47,6 +49,8 @@ class X18Client:
         self._running = True
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
+        self._meta_thread = threading.Thread(target=self._meta_loop, daemon=True)
+        self._meta_thread.start()
 
     def stop(self):
         self._running = False
@@ -171,12 +175,15 @@ class X18Client:
         for endpoint in ["/meters/0", "/meters/1"]:
             self._send(build_message(endpoint, ("s", endpoint)))
 
-    def _run(self):
-        # Initial channel metadata read
-        self._read_channel_meta()
+    def _meta_loop(self):
+        """Refresh names/faders/mutes every 30s, independent of receive loop."""
+        time.sleep(1)  # let socket settle
+        while self._running:
+            self._read_channel_meta()
+            time.sleep(30)
 
-        last_sub  = 0.0
-        last_meta = time.time()
+    def _run(self):
+        last_sub = 0.0
 
         while self._running:
             now = time.time()
@@ -185,11 +192,6 @@ class X18Client:
             if now - last_sub > 5:
                 self._subscribe_meters()
                 last_sub = now
-
-            # Refresh faders/names every 30s
-            if now - last_meta > 30:
-                self._read_channel_meta()
-                last_meta = now
 
             # Receive
             try:
