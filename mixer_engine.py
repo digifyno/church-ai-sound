@@ -16,7 +16,7 @@ import time
 
 log = logging.getLogger(__name__)
 
-from config import CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB
+from config import CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB, FADER_CEIL_DB
 from osc import fader_to_db, db_to_fader, compute_adjustment
 
 
@@ -87,7 +87,7 @@ class MixerEngine:
                 input_db, fader_db, target_db, hold_zone=0.5
             )
 
-            proposed_fader_db = max(-90.0, min(10.0, fader_db + capped))
+            proposed_fader_db = max(-90.0, min(FADER_CEIL_DB, fader_db + capped))
 
             proposals[ch] = {
                 "name":              info["name"],
