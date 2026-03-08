@@ -43,3 +43,13 @@ STALE_INPUT_BAND_DB    = 1.0  # input must vary more than this (dB) to not be co
 
 MIC_DEVICE   = None     # None = system default mic
 SAMPLE_RATE  = 48000
+
+# AI analysis
+ANALYSIS_INTERVAL = 15   # seconds between Claude queries
+
+# Auto-mix
+CYCLE_SEC  = 2.0   # seconds per auto-mix cycle
+HOLD_ZONE  = 1.0   # ±dB: close enough, don't adjust
+
+# Room mic
+BLOCK_SIZE = 4096  # audio capture block size (~85ms at 48 kHz)

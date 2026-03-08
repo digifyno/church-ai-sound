@@ -10,9 +10,10 @@ import threading
 import json
 from datetime import datetime
 
+from config import ANALYSIS_INTERVAL
+
 log = logging.getLogger(__name__)
 
-ANALYSIS_INTERVAL = 15  # seconds
 LOG_FILE = "ai_log.jsonl"
 
 # Haiku 4.5 pricing (per million tokens)

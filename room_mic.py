@@ -14,11 +14,9 @@ import sounddevice as sd
 import threading
 import time
 
-from config import MIC_DEVICE, SAMPLE_RATE
+from config import MIC_DEVICE, SAMPLE_RATE, BLOCK_SIZE
 
 log = logging.getLogger(__name__)
-
-BLOCK_SIZE = 4096   # ~85 ms at 48 kHz
 
 
 class RoomMic:

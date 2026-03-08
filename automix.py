@@ -30,13 +30,12 @@ logging.basicConfig(
 )
 
 from config import (CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB,
-                    MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB)
+                    MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB,
+                    CYCLE_SEC, HOLD_ZONE)
 from osc import fader_to_db, db_to_fader, compute_adjustment
 from x18 import X18Client
 
-CYCLE_SEC   = 2.0
 FADER_CEIL  = 0.0     # never push a fader above 0 dB
-HOLD_ZONE   = 1.0     # ±1 dB = close enough, don't adjust
 
 
 def save_backup(client: X18Client, path="fader_backup.json"):
