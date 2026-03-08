@@ -17,13 +17,14 @@ Usage:
 """
 
 import json
+import os
 import signal
 import sys
 import time
 
 from config import (CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB,
                     MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB)
-from osc import fader_to_db, db_to_fader
+from osc import fader_to_db, db_to_fader, compute_adjustment
 from x18 import X18Client
 
 CYCLE_SEC   = 2.0
@@ -45,6 +46,9 @@ def save_backup(client: X18Client, path="fader_backup.json"):
 
 
 def restore_backup(client: X18Client, path="fader_backup.json"):
+    if not os.path.exists(path):
+        print(f"No backup found at {path}. Nothing to restore.")
+        return
     with open(path) as f:
         backup = json.load(f)
     for ch_str, info in backup.items():
@@ -85,16 +89,14 @@ def auto_mix_step(client: X18Client, consecutive_raises: dict, input_history: di
         if len(history) >= 2 and history[-1] > history[-2] + STALE_INPUT_BAND_DB:
             consecutive_raises[ch] = 0
 
-        # Estimated output level
-        output_db = input_db + fader_db
-        error     = target_db - output_db
+        output_db, delta, action = compute_adjustment(
+            input_db, fader_db, target_db, hold_zone=HOLD_ZONE, max_step=MAX_STEP_DB
+        )
 
-        if abs(error) < HOLD_ZONE:
+        if action == "hold":
             consecutive_raises[ch] = 0
             continue
 
-        # Gradual: cap to ±MAX_STEP_DB per cycle
-        delta = max(-MAX_STEP_DB, min(MAX_STEP_DB, error))
         new_fader_db = fader_db + delta
 
         # Safety ceiling
@@ -106,7 +108,7 @@ def auto_mix_step(client: X18Client, consecutive_raises: dict, input_history: di
             consecutive_raises[ch] = 0
             continue
 
-        if delta > 0:  # raising the fader
+        if action == "raise":  # raising the fader
             # Stale-input guard: input stuck in narrow band indicates mic issue
             if len(history) >= STALE_INPUT_WINDOW:
                 band = max(history) - min(history)
@@ -129,7 +131,7 @@ def auto_mix_step(client: X18Client, consecutive_raises: dict, input_history: di
             consecutive_raises[ch] = 0  # reset on lower
 
         client.set_fader_db(ch, new_fader_db)
-        direction = "↑" if delta > 0 else "↓"
+        direction = "↑" if action == "raise" else "↓"
         actions.append(
             f"  CH{ch:<2} {info['name']:<12} "
             f"in={input_db:>6.1f}  fader {fader_db:>6.1f} → {new_fader_db:>6.1f} dB  "

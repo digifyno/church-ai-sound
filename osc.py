@@ -5,6 +5,8 @@ Used by both x18.py and mixer_engine.py.
 
 import struct
 
+from config import MAX_STEP_DB
+
 
 def encode_str(s: str) -> bytes:
     """Encode a string with null-terminator padded to 4-byte boundary."""
@@ -102,3 +104,20 @@ def db_to_fader(db: float) -> float:
             t = (db - dlo) / (dhi - dlo) if dhi > dlo else 0.0
             return flo + t * (fhi - flo)
     return 1.0
+
+
+# ── Mix math ─────────────────────────────────────────────────────────
+
+def compute_adjustment(input_db: float, fader_db: float, target_db: float,
+                       hold_zone: float = 1.0, max_step: float = MAX_STEP_DB) -> tuple:
+    """Compute the fader adjustment needed to reach target_db.
+
+    Returns (output_db, delta, action) where action is 'raise', 'lower', or 'hold'.
+    """
+    output_db = input_db + fader_db
+    error = target_db - output_db
+    if abs(error) < hold_zone:
+        return output_db, 0.0, "hold"
+    delta = max(-max_step, min(max_step, error))
+    action = "raise" if delta > 0 else "lower"
+    return output_db, delta, action

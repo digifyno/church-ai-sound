@@ -14,7 +14,7 @@ import threading
 import time
 
 from config import CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB
-from osc import fader_to_db, db_to_fader
+from osc import fader_to_db, db_to_fader, compute_adjustment
 
 
 class MixerEngine:
@@ -80,19 +80,9 @@ class MixerEngine:
             input_db   = info["db"]
             fader_db   = info["fader_db"]
 
-            # Estimated output level (pre-fader meter + fader gain)
-            output_db  = input_db + fader_db
-
-            # How far from target?
-            error = target_db - output_db
-
-            # Only propose a change if the error is meaningful (> 0.5 dB)
-            if abs(error) < 0.5:
-                action = "hold"
-                capped = 0.0
-            else:
-                capped = max(-MAX_STEP_DB, min(MAX_STEP_DB, error))
-                action = "raise" if capped > 0 else "lower"
+            output_db, capped, action = compute_adjustment(
+                input_db, fader_db, target_db, hold_zone=0.5
+            )
 
             proposed_fader_db = max(-90.0, min(10.0, fader_db + capped))
 
