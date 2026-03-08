@@ -71,6 +71,8 @@ When writing live fader changes:
 2. Cap adjustments at ±2 dB per cycle (`MAX_STEP_DB` in config)
 3. Never push faders above 0 dB
 4. Restore on exit (signal handler)
+5. Halt raises after `MAX_CONSECUTIVE_RAISES` cycles without input improvement (runaway protection)
+6. Halt raises when input level is stuck in a narrow band (`STALE_INPUT_BAND_DB`) over `STALE_INPUT_WINDOW` cycles (stale-input guard)
 
 ## Adding New OSC Parameters
 
