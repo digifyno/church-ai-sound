@@ -182,13 +182,24 @@ def main():
     cycle = 0
     consecutive_raises: dict[int, int] = {}
     input_history: dict[int, list] = {}
+    was_connected = x.connected
     while True:
         cycle += 1
 
-        if not x.connected:
-            log.warning("Mixer offline — skipping cycle %d", cycle)
+        now_connected = x.connected
+        if not now_connected:
+            if cycle % 5 == 1:  # log every 5 cycles to avoid log spam
+                log.warning("Mixer offline — pausing adjustments")
+            was_connected = False
             time.sleep(CYCLE_SEC)
             continue
+
+        if not was_connected:
+            # Mixer just reconnected — clear stale counters
+            consecutive_raises.clear()
+            input_history.clear()
+            log.info("Mixer reconnected — counters reset")
+        was_connected = True
 
         try:
             actions = auto_mix_step(x, consecutive_raises, input_history)
