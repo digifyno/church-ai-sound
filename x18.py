@@ -68,6 +68,8 @@ class X18Client:
 
     def set_fader(self, ch: int, value: float):
         """Set fader position (0.0–1.0) for channel 1–16."""
+        if not (1 <= ch <= 16):
+            raise ValueError(f"Channel {ch} out of range 1-16")
         value = max(0.0, min(1.0, value))
         self._send(build_message(f"/ch/{ch:02d}/mix/fader", ("f", value)))
         with self._lock:
@@ -75,11 +77,15 @@ class X18Client:
 
     def set_fader_db(self, ch: int, db: float):
         """Set fader by dB value (-90 to +10)."""
+        if not (1 <= ch <= 16):
+            raise ValueError(f"Channel {ch} out of range 1-16")
         from osc import db_to_fader
         self.set_fader(ch, db_to_fader(db))
 
     def set_mute(self, ch: int, on: bool):
         """Set channel on/off (True = signal flows, False = muted)."""
+        if not (1 <= ch <= 16):
+            raise ValueError(f"Channel {ch} out of range 1-16")
         self._send(build_message(f"/ch/{ch:02d}/mix/on", ("i", 1 if on else 0)))
         with self._lock:
             self._mutes[ch] = on
