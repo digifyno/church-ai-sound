@@ -89,7 +89,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, shutdown)
 
     print("Church AI Sound Technician")
-    print(f"  Mixer   → {x18._sock is None and 'connecting' or 'ready'}")
+    print(f"  Mixer   → {'ready' if x18.connected else 'connecting'}")
     print(f"  Web UI  → http://localhost:{WEB_PORT}")
     print(f"  Mode    → SIMULATION (read only)")
     print()
