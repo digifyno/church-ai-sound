@@ -31,11 +31,9 @@ logging.basicConfig(
 
 from config import (CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB,
                     MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB,
-                    CYCLE_SEC, HOLD_ZONE)
+                    CYCLE_SEC, HOLD_ZONE, FADER_CEIL_DB)
 from osc import fader_to_db, db_to_fader, compute_adjustment
 from x18 import X18Client
-
-FADER_CEIL  = 0.0     # never push a fader above 0 dB
 
 
 def save_backup(client: X18Client, path="fader_backup.json"):
@@ -106,7 +104,7 @@ def auto_mix_step(client: X18Client, consecutive_raises: dict, input_history: di
         new_fader_db = fader_db + delta
 
         # Safety ceiling
-        new_fader_db = min(new_fader_db, FADER_CEIL)
+        new_fader_db = min(new_fader_db, FADER_CEIL_DB)
         new_fader_db = max(new_fader_db, -90.0)
 
         # Skip if no meaningful change
@@ -163,7 +161,7 @@ def main():
     print("Church AI Auto-Mixer — LIVE")
     print(f"  Mixer: {x.connected and 'connected' or 'offline'}")
     print(f"  Cycle: {CYCLE_SEC}s   Max step: ±{MAX_STEP_DB} dB")
-    print(f"  Fader ceiling: {FADER_CEIL} dB")
+    print(f"  Fader ceiling: {FADER_CEIL_DB} dB")
     print()
 
     # Save backup before any changes

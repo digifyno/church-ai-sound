@@ -10,15 +10,9 @@ import threading
 import json
 from datetime import datetime
 
-from config import ANALYSIS_INTERVAL
+from config import ANALYSIS_INTERVAL, AI_LOG_FILE, AI_PRICE_INPUT, AI_PRICE_OUTPUT
 
 log = logging.getLogger(__name__)
-
-LOG_FILE = "ai_log.jsonl"
-
-# Haiku 4.5 pricing (per million tokens)
-PRICE_INPUT  = 0.80   # $0.80 / 1M input tokens
-PRICE_OUTPUT = 4.00   # $4.00 / 1M output tokens
 
 
 class AIEngine:
@@ -69,7 +63,7 @@ class AIEngine:
 
     def _log(self, entry: dict):
         try:
-            with open(LOG_FILE, "a") as f:
+            with open(AI_LOG_FILE, "a") as f:
                 f.write(json.dumps(entry) + "\n")
         except Exception:
             log.warning("Failed to write AI log entry", exc_info=True)
@@ -142,7 +136,7 @@ class AIEngine:
             answer       = resp.content[0].text.strip()
             input_tokens = resp.usage.input_tokens
             output_tokens = resp.usage.output_tokens
-            cost = (input_tokens * PRICE_INPUT + output_tokens * PRICE_OUTPUT) / 1_000_000
+            cost = (input_tokens * AI_PRICE_INPUT + output_tokens * AI_PRICE_OUTPUT) / 1_000_000
 
             with self._lock:
                 self._total_requests      += 1
