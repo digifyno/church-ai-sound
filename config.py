@@ -37,5 +37,9 @@ ROLE_TARGETS = {
 SILENCE_DB   = -55.0   # below this = effectively silent
 MAX_STEP_DB  = 2.0     # max fader adjustment per simulation cycle
 
+MAX_CONSECUTIVE_RAISES = 5    # halt raises after this many cycles without input improvement
+STALE_INPUT_WINDOW     = 5    # cycles to look back for stale-input detection
+STALE_INPUT_BAND_DB    = 1.0  # input must vary more than this (dB) to not be considered stale
+
 MIC_DEVICE   = None     # None = system default mic
 SAMPLE_RATE  = 48000

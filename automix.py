@@ -21,7 +21,8 @@ import signal
 import sys
 import time
 
-from config import CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB
+from config import (CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB,
+                    MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB)
 from osc import fader_to_db, db_to_fader
 from x18 import X18Client
 
@@ -55,7 +56,7 @@ def restore_backup(client: X18Client, path="fader_backup.json"):
     print("Faders restored from backup.")
 
 
-def auto_mix_step(client: X18Client) -> list[str]:
+def auto_mix_step(client: X18Client, consecutive_raises: dict, input_history: dict) -> list[str]:
     """One cycle: read state, compute deltas, apply.  Returns log lines."""
     snap = client.get_snapshot()
     actions = []
@@ -64,6 +65,8 @@ def auto_mix_step(client: X18Client) -> list[str]:
         if ch > 16:
             continue
         if not info["active"] or not info["on"]:
+            consecutive_raises.pop(ch, None)
+            input_history.pop(ch, None)
             continue
 
         role      = CHANNEL_ROLES.get(ch, "unknown")
@@ -71,11 +74,23 @@ def auto_mix_step(client: X18Client) -> list[str]:
         input_db  = info["db"]
         fader_db  = info["fader_db"]
 
+        # Track input history for stale-input detection
+        history = input_history.get(ch, [])
+        history.append(input_db)
+        if len(history) > STALE_INPUT_WINDOW:
+            history = history[-STALE_INPUT_WINDOW:]
+        input_history[ch] = history
+
+        # Reset raise counter if input has improved significantly (vocalist returned)
+        if len(history) >= 2 and history[-1] > history[-2] + STALE_INPUT_BAND_DB:
+            consecutive_raises[ch] = 0
+
         # Estimated output level
         output_db = input_db + fader_db
         error     = target_db - output_db
 
         if abs(error) < HOLD_ZONE:
+            consecutive_raises[ch] = 0
             continue
 
         # Gradual: cap to ±MAX_STEP_DB per cycle
@@ -88,7 +103,30 @@ def auto_mix_step(client: X18Client) -> list[str]:
 
         # Skip if no meaningful change
         if abs(new_fader_db - fader_db) < 0.1:
+            consecutive_raises[ch] = 0
             continue
+
+        if delta > 0:  # raising the fader
+            # Stale-input guard: input stuck in narrow band indicates mic issue
+            if len(history) >= STALE_INPUT_WINDOW:
+                band = max(history) - min(history)
+                if band <= STALE_INPUT_BAND_DB:
+                    actions.append(
+                        f"  CH{ch:<2} {info['name']:<12} HOLD (stale input: "
+                        f"range={band:.1f} dB over {STALE_INPUT_WINDOW} cycles)"
+                    )
+                    continue
+
+            # Consecutive-raise guard: halt if fader keeps rising without improvement
+            consecutive_raises[ch] = consecutive_raises.get(ch, 0) + 1
+            if consecutive_raises[ch] > MAX_CONSECUTIVE_RAISES:
+                actions.append(
+                    f"  CH{ch:<2} {info['name']:<12} HOLD (runaway protection: "
+                    f"{consecutive_raises[ch]} consecutive raises)"
+                )
+                continue
+        else:
+            consecutive_raises[ch] = 0  # reset on lower
 
         client.set_fader_db(ch, new_fader_db)
         direction = "↑" if delta > 0 else "↓"
@@ -135,9 +173,11 @@ def main():
     signal.signal(signal.SIGTERM, on_exit)
 
     cycle = 0
+    consecutive_raises: dict[int, int] = {}
+    input_history: dict[int, list] = {}
     while True:
         cycle += 1
-        actions = auto_mix_step(x)
+        actions = auto_mix_step(x, consecutive_raises, input_history)
         ts = time.strftime("%H:%M:%S")
         if actions:
             print(f"[{ts}] Cycle {cycle} — {len(actions)} adjustment(s):")
