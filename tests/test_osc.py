@@ -108,6 +108,27 @@ def test_parse_meter_blob_values():
     assert levels == [pytest.approx(1.0)]
 
 
+# ── parse_meter_blob bounds validation ──
+
+def test_parse_meter_blob_empty_blob():
+    assert parse_meter_blob(b"") == []
+
+
+def test_parse_meter_blob_inflated_count():
+    # count=256 but 0 bytes of meter data — must return [] not raise
+    blob = struct.pack("<i", 256)
+    assert parse_meter_blob(blob) == []
+
+
+def test_parse_meter_blob_partial_data():
+    # count=5 but only 2 channels worth of data — clamp to 2
+    blob = struct.pack("<i", 5) + struct.pack("<hh", 256, 512)
+    levels = parse_meter_blob(blob)
+    assert len(levels) == 2
+    assert levels[0] == pytest.approx(1.0)
+    assert levels[1] == pytest.approx(2.0)
+
+
 # ── blob size cap (security) ──
 
 def test_parse_message_blob_oversized_returns_none():

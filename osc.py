@@ -66,7 +66,12 @@ def parse_message(data: bytes):
 
 def parse_meter_blob(blob: bytes) -> list[float]:
     """Parse an X-AIR meter blob into a list of dB values."""
+    if len(blob) < 4:
+        return []
     count = struct.unpack("<i", blob[:4])[0]
+    # Clamp count to available data and sanity-check against X18 channel count
+    max_count = (len(blob) - 4) // 2
+    count = max(0, min(count, max_count, 36))  # X18 has at most 36 meter channels
     return [struct.unpack("<h", blob[4+i*2:6+i*2])[0] / 256.0 for i in range(count)]
 
 
