@@ -67,7 +67,7 @@ AI_MODEL            = "claude-haiku-4-5-20251001"
 AI_LOG_FILE         = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "ai_log.jsonl")
 AI_PRICE_INPUT      = 0.80   # $0.80 / 1M input tokens
 AI_PRICE_OUTPUT     = 4.00   # $4.00 / 1M output tokens
-MAX_DAILY_COST_USD  = 10.00  # halt AI analysis after $10 in a single session (0 = disable AI)
+MAX_DAILY_COST_USD  = 10.00  # halt AI analysis after $10 in a calendar day (0 = disable AI)
 
 # Auto-mix safety
 FADER_CEIL_DB    = 0.0    # never push a fader above 0 dB

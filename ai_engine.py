@@ -33,6 +33,25 @@ class AIEngine:
         self._total_cost         = 0.0
         self._budget_date        = date.today()
 
+    def _load_today_cost(self) -> float:
+        """Read ai_log.jsonl and sum costs logged today."""
+        today_str = date.today().isoformat()[:10]  # "2026-03-09"
+        total = 0.0
+        try:
+            with open(AI_LOG_FILE) as f:
+                for line in f:
+                    try:
+                        entry = json.loads(line)
+                        if entry.get("ts", "").startswith(today_str):
+                            total += entry.get("cost_usd", 0.0)
+                    except (json.JSONDecodeError, KeyError):
+                        continue
+        except FileNotFoundError:
+            pass  # no log yet — first run
+        except Exception:
+            log.warning("Could not read AI log for cost recovery", exc_info=True)
+        return total
+
     def start(self):
         api_key = os.environ.get("ANTHROPIC_API_KEY", "")
         if not api_key:
@@ -42,6 +61,12 @@ class AIEngine:
 
         import anthropic
         self._client = anthropic.Anthropic(api_key=api_key)
+
+        with self._lock:
+            self._total_cost = self._load_today_cost()
+            if self._total_cost > 0:
+                log.info("Recovered today's AI cost from log: $%.4f", self._total_cost)
+
         self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
