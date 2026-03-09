@@ -10,7 +10,7 @@ import threading
 import json
 from datetime import datetime
 
-from config import ANALYSIS_INTERVAL, AI_LOG_FILE, AI_PRICE_INPUT, AI_PRICE_OUTPUT
+from config import ANALYSIS_INTERVAL, AI_LOG_FILE, AI_PRICE_INPUT, AI_PRICE_OUTPUT, MAX_DAILY_COST_USD
 
 log = logging.getLogger(__name__)
 
@@ -175,6 +175,16 @@ class AIEngine:
 
                 active_count = sum(1 for c in channels.values() if c.get('active', False))
                 if active_count == 0:
+                    time.sleep(ANALYSIS_INTERVAL)
+                    continue
+
+                with self._lock:
+                    over_budget = self._total_cost >= MAX_DAILY_COST_USD
+                if over_budget:
+                    log.warning(
+                        "AI cost budget exceeded ($%.4f >= $%.2f) — analysis paused",
+                        self._total_cost, MAX_DAILY_COST_USD,
+                    )
                     time.sleep(ANALYSIS_INTERVAL)
                     continue
 
