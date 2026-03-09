@@ -182,6 +182,7 @@ class AIEngine:
                 with self._lock:
                     self._suggestion = text
             except Exception as e:
+                log.exception("AIEngine analysis loop error")
                 with self._lock:
                     self._suggestion = f"Analysis error: {e}"
             time.sleep(ANALYSIS_INTERVAL)
