@@ -59,7 +59,8 @@ BLOCK_SIZE = 4096  # audio capture block size (~85ms at 48 kHz)
 
 # WebSocket CORS — defaults to localhost only; set CORS_ORIGINS env var for LAN access
 # e.g. CORS_ORIGINS=http://192.168.8.100:5050
-SOCKETIO_CORS_ORIGINS = _os.environ.get("CORS_ORIGINS", "http://localhost:5050,http://127.0.0.1:5050")
+_cors_raw = _os.environ.get("CORS_ORIGINS", "http://localhost:5050,http://127.0.0.1:5050")
+SOCKETIO_CORS_ORIGINS = [o.strip() for o in _cors_raw.split(",") if o.strip()]
 
 # AI cost accounting (Haiku 4.5 pricing, per million tokens)
 AI_MODEL            = "claude-haiku-4-5-20251001"
