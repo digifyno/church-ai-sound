@@ -10,7 +10,7 @@ import threading
 import json
 from datetime import datetime, date
 
-from config import ANALYSIS_INTERVAL, AI_LOG_FILE, AI_MODEL, AI_PRICE_INPUT, AI_PRICE_OUTPUT, MAX_DAILY_COST_USD
+from config import ANALYSIS_INTERVAL, ANALYSIS_TIMEOUT_SEC, AI_LOG_FILE, AI_MODEL, AI_PRICE_INPUT, AI_PRICE_OUTPUT, MAX_DAILY_COST_USD
 
 log = logging.getLogger(__name__)
 
@@ -131,6 +131,7 @@ class AIEngine:
                 model=AI_MODEL,
                 max_tokens=150,
                 messages=[{"role": "user", "content": prompt_text}],
+                timeout=ANALYSIS_TIMEOUT_SEC,
             )
             elapsed = time.time() - t0
 

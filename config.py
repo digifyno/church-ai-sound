@@ -47,7 +47,8 @@ MIC_DEVICE   = None     # None = system default mic
 SAMPLE_RATE  = 48000
 
 # AI analysis
-ANALYSIS_INTERVAL = 15   # seconds between Claude queries
+ANALYSIS_INTERVAL   = 15   # seconds between Claude queries
+ANALYSIS_TIMEOUT_SEC = 30  # seconds before API call is abandoned
 
 # Auto-mix
 CYCLE_SEC  = 2.0   # seconds per auto-mix cycle
