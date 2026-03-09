@@ -77,7 +77,7 @@ def health():
     return jsonify({
         "status": "ok",
         "mixer_connected": x18.connected,
-        "ai_active": ai._running,
+        "ai_active": ai.running,
     })
 
 

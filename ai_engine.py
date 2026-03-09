@@ -49,6 +49,12 @@ class AIEngine:
     def stop(self):
         self._running = False
 
+    @property
+    def running(self) -> bool:
+        """True if the AI analysis loop is active."""
+        with self._lock:
+            return self._running
+
     def get_suggestion(self) -> str:
         with self._lock:
             return self._suggestion
