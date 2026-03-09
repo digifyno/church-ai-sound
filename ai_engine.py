@@ -188,6 +188,8 @@ class AIEngine:
 
                 active_count = sum(1 for c in channels.values() if c.get('active', False))
                 if active_count == 0:
+                    with self._lock:
+                        self._suggestion = "No active channels — mix is silent."
                     time.sleep(ANALYSIS_INTERVAL)
                     continue
 

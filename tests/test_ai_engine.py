@@ -32,6 +32,29 @@ def test_budget_resets_on_new_day():
     assert engine._budget_date == tomorrow
 
 
+def test_silence_message_when_all_channels_inactive():
+    inactive_channels = {
+        "1": {"active": False, "db": -60, "name": "CH1", "fader_db": 0},
+        "2": {"active": False, "db": -60, "name": "CH2", "fader_db": 0},
+    }
+    engine = AIEngine(
+        get_channels=lambda: inactive_channels,
+        get_room=lambda: {},
+        get_sim=lambda: {},
+    )
+
+    def stop_after_sleep(s):
+        engine._running = False
+
+    with patch("ai_engine.date") as mock_date, \
+         patch("time.sleep", side_effect=stop_after_sleep):
+        mock_date.today.return_value = datetime.date(2026, 3, 9)
+        engine._running = True
+        engine._loop()
+
+    assert engine.get_suggestion() == "No active channels — mix is silent."
+
+
 def test_budget_not_reset_same_day():
     engine = _make_engine()
     engine._total_cost = 0.75
