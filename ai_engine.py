@@ -203,8 +203,8 @@ class AIEngine:
                 text = self._analyze(channels, room, sim)
                 with self._lock:
                     self._suggestion = text
-            except Exception as e:
+            except Exception:
                 log.exception("AIEngine analysis loop error")
                 with self._lock:
-                    self._suggestion = f"Analysis error: {e}"
+                    self._suggestion = "AI analysis temporarily unavailable."
             time.sleep(ANALYSIS_INTERVAL)
