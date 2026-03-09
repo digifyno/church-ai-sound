@@ -78,6 +78,8 @@ class MixerEngine:
         proposals = {}
 
         for ch, info in snapshot.items():
+            if ch > 16:          # channels 17-18 are aux/bus, not role-mapped
+                continue
             if not info["active"] or not info["on"]:
                 continue
 
