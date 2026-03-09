@@ -41,6 +41,7 @@ class X18Client:
         self._connected = False
         self._last_rx   = 0.0        # last time we received anything
 
+        self._send_lock = threading.Lock()
         self._meta_thread = None
 
     # ── lifecycle ──────────────────────────────────────────────────────
@@ -120,7 +121,8 @@ class X18Client:
     # ── internal ───────────────────────────────────────────────────────
 
     def _send(self, msg: bytes):
-        self._sock.sendto(msg, (MIXER_IP, MIXER_PORT))
+        with self._send_lock:
+            self._sock.sendto(msg, (MIXER_IP, MIXER_PORT))
 
     def _query(self, sock: socket.socket, address: str, expected_type: str):
         """Send a query on *sock* and return the first value matching expected_type."""
