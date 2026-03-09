@@ -97,6 +97,16 @@ def test_fader_ceiling_never_exceeded():
         assert db <= 0.0, f"Fader pushed above 0 dB: {db}"
 
 
+def test_unmapped_channel_is_skipped():
+    """Channels not in CHANNEL_ROLES must never have their fader adjusted."""
+    client = FakeClient({9: _ch(input_db=-30.0, fader_db=0.0), 1: _ch(input_db=-30.0, fader_db=-10.0)})
+    consecutive = {}
+    history = {}
+    auto_mix_step(client, consecutive, history)
+    adjusted_channels = [ch for ch, _ in client.fader_calls]
+    assert 9 not in adjusted_channels, "Unmapped channel 9 must not be adjusted"
+
+
 # ── save_backup / restore_backup ──
 
 def test_save_and_restore_backup(tmp_path):

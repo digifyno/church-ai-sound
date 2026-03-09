@@ -94,7 +94,9 @@ def auto_mix_step(client: X18Client, consecutive_raises: dict, input_history: di
             input_history.pop(ch, None)
             continue
 
-        role      = CHANNEL_ROLES.get(ch, "unknown")
+        role = CHANNEL_ROLES.get(ch)
+        if role is None:
+            continue
         target_db = ROLE_TARGETS[role]
         input_db  = info["db"]
         fader_db  = info["fader_db"]
