@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, redirect
 from flask_socketio import SocketIO
 import threading
 import time
@@ -51,6 +51,11 @@ ai     = AIEngine(
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return redirect("/static/favicon.svg", code=301)
 
 
 @app.route("/health")
