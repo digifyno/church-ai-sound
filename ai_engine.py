@@ -102,7 +102,7 @@ class AIEngine:
         for ch, i in silent:
             prompt.append(f"  CH{ch} {i['name']}")
 
-        if room.get('available', True):
+        if room.get('available', False):
             prompt.append("")
             prompt.append(
                 f"ROOM MIC: {room['db']} dB  "
