@@ -1,5 +1,6 @@
 import pytest
-from automix import auto_mix_step
+from unittest.mock import MagicMock, patch
+from automix import auto_mix_step, save_backup, restore_backup
 from config import MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB
 
 
@@ -94,3 +95,26 @@ def test_fader_ceiling_never_exceeded():
     auto_mix_step(client, consecutive, history)
     for ch, db in client.fader_calls:
         assert db <= 0.0, f"Fader pushed above 0 dB: {db}"
+
+
+# ── save_backup / restore_backup ──
+
+def test_save_and_restore_backup(tmp_path):
+    client = MagicMock()
+    client.get_snapshot.return_value = {
+        1: {"name": "VOC", "fader": 0.75, "fader_db": -5.0, "on": True}
+    }
+    path = tmp_path / "backup.json"
+    with patch("time.sleep"):
+        save_backup(client, path=str(path))
+        assert path.exists()
+        restore_backup(client, path=str(path))
+    client.set_fader.assert_called_once_with(1, 0.75)
+
+
+def test_restore_backup_corrupted_file(tmp_path):
+    path = tmp_path / "backup.json"
+    path.write_text("{ not valid json")
+    client = MagicMock()
+    restore_backup(client, path=str(path))  # should not raise
+    client.set_fader.assert_not_called()

@@ -1,5 +1,7 @@
+import struct
+
 import pytest
-from osc import fader_to_db, db_to_fader, compute_adjustment
+from osc import build_message, compute_adjustment, db_to_fader, fader_to_db, parse_message, parse_meter_blob
 
 
 # ── fader_to_db ──
@@ -65,3 +67,42 @@ def test_compute_adjustment_lower():
 def test_compute_adjustment_max_step_capped():
     _, delta, _ = compute_adjustment(-20.0, 0.0, -40.0, hold_zone=1.0, max_step=2.0)
     assert abs(delta) <= 2.0  # never exceeds max_step
+
+
+# ── build_message / parse_message ──
+
+def test_build_and_parse_float():
+    msg = build_message("/ch/01/mix/fader", ("f", 0.75))
+    addr, vals = parse_message(msg)
+    assert addr == "/ch/01/mix/fader"
+    assert vals == [("f", pytest.approx(0.75, abs=1e-5))]
+
+
+def test_build_no_args_query():
+    msg = build_message("/ch/01/mix/fader")
+    addr, vals = parse_message(msg)
+    assert addr == "/ch/01/mix/fader"
+    assert vals == []
+
+
+def test_build_and_parse_int():
+    msg = build_message("/some/addr", ("i", 42))
+    addr, vals = parse_message(msg)
+    assert addr == "/some/addr"
+    assert vals == [("i", 42)]
+
+
+# ── parse_meter_blob ──
+
+def test_parse_meter_blob_length():
+    blob = struct.pack("<i", 18) + b"\x00" * 36
+    levels = parse_meter_blob(blob)
+    assert len(levels) == 18
+    assert all(isinstance(v, float) for v in levels)
+
+
+def test_parse_meter_blob_values():
+    # int16 value of 256 → 256 / 256.0 = 1.0 dB
+    blob = struct.pack("<i", 1) + struct.pack("<h", 256)
+    levels = parse_meter_blob(blob)
+    assert levels == [pytest.approx(1.0)]
