@@ -2,6 +2,8 @@
 Central configuration for Church AI Sound.
 """
 
+import os as _os
+
 MIXER_IP   = "192.168.8.18"
 MIXER_PORT = 10024
 WEB_PORT   = 5050
@@ -55,7 +57,7 @@ HOLD_ZONE  = 1.0   # ±dB: close enough, don't adjust
 BLOCK_SIZE = 4096  # audio capture block size (~85ms at 48 kHz)
 
 # AI cost accounting (Haiku 4.5 pricing, per million tokens)
-AI_LOG_FILE      = "ai_log.jsonl"
+AI_LOG_FILE      = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "ai_log.jsonl")
 AI_PRICE_INPUT   = 0.80   # $0.80 / 1M input tokens
 AI_PRICE_OUTPUT  = 4.00   # $4.00 / 1M output tokens
 

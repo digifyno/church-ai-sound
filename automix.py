@@ -30,6 +30,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 from config import (CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB,
                     MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB,
                     CYCLE_SEC, HOLD_ZONE, FADER_CEIL_DB)
@@ -37,7 +39,9 @@ from osc import fader_to_db, db_to_fader, compute_adjustment
 from x18 import X18Client
 
 
-def save_backup(client: X18Client, path="fader_backup.json"):
+def save_backup(client: X18Client, path=None):
+    if path is None:
+        path = os.path.join(_SCRIPT_DIR, "fader_backup.json")
     snap = client.get_snapshot()
     backup = {}
     for ch, c in snap.items():
@@ -50,7 +54,9 @@ def save_backup(client: X18Client, path="fader_backup.json"):
     return backup
 
 
-def restore_backup(client: X18Client, path="fader_backup.json"):
+def restore_backup(client: X18Client, path=None):
+    if path is None:
+        path = os.path.join(_SCRIPT_DIR, "fader_backup.json")
     if not os.path.exists(path):
         print(f"No backup found at {path}. Nothing to restore.")
         return
