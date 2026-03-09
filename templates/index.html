@@ -200,6 +200,13 @@ main{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 72px);over
 </main>
 
 <script>
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 const S = io();
 let aiTs = null;
 
@@ -247,7 +254,7 @@ function chs(data) {
       row.id = `r${ch}`;
       row.innerHTML = `
         <div class="cn">${ch}</div>
-        <div class="cname" id="n${ch}">${c.name}</div>
+        <div class="cname" id="n${ch}">${esc(c.name)}</div>
         <div class="mw"><div class="mb green" id="b${ch}"></div></div>
         <div class="cdb s" id="d${ch}">—</div>
         <div class="cfader" id="f${ch}">—</div>
@@ -316,7 +323,7 @@ function sim(d) {
 
     html += `
       <div class="sr">
-        <div class="sr-name">${p.name}</div>
+        <div class="sr-name">${esc(p.name)}</div>
         <div class="sr-bar-wrap">
           <div class="sr-current" style="width:${curPct}%"></div>
           <div class="sr-proposed ${act}" style="width:${newPct}%"></div>
@@ -351,7 +358,7 @@ function room(r) {
     const sp = $("sp");
     sp.textContent = "NO MIC";
     sp.className = "sp off";
-    $("freqs").innerHTML = r.error ? `<span class="ftag" title="${r.error}">mic error</span>` : "";
+    $("freqs").innerHTML = r.error ? `<span class="ftag" title="${esc(r.error)}">mic error</span>` : "";
     return;
   }
   el.style.color = "";
