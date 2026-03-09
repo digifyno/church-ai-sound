@@ -8,7 +8,7 @@ import os
 import time
 import threading
 import json
-from datetime import datetime
+from datetime import datetime, date
 
 from config import ANALYSIS_INTERVAL, AI_LOG_FILE, AI_PRICE_INPUT, AI_PRICE_OUTPUT, MAX_DAILY_COST_USD
 
@@ -31,6 +31,7 @@ class AIEngine:
         self._total_input_tokens = 0
         self._total_output_tokens = 0
         self._total_cost         = 0.0
+        self._budget_date        = date.today()
 
     def start(self):
         api_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -169,6 +170,16 @@ class AIEngine:
     def _loop(self):
         while self._running:
             try:
+                today = date.today()
+                with self._lock:
+                    if today != self._budget_date:
+                        log.info(
+                            "New day — resetting AI cost accumulator (was $%.4f)",
+                            self._total_cost,
+                        )
+                        self._total_cost = 0.0
+                        self._budget_date = today
+
                 channels = self._get_channels()
                 room     = self._get_room()
                 sim      = self._get_sim()
