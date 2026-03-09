@@ -29,6 +29,7 @@ class RoomMic:
             "dominant_freqs":  [],
             "speech_detected": False,
             "available":       False,
+            "error":           None,
         }
         self._peak_db   = -90.0
         self._last_time = time.time()
@@ -102,4 +103,5 @@ class RoomMic:
                 "dominant_freqs":  dominant,
                 "speech_detected": speech,
                 "available":       True,
+                "error":           None,
             }
