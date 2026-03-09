@@ -38,6 +38,20 @@ if not _secret:
 app.config["SECRET_KEY"] = _secret
 socketio = SocketIO(app, cors_allowed_origins=SOCKETIO_CORS_ORIGINS, async_mode="eventlet")
 
+
+@app.after_request
+def set_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "connect-src 'self' ws: wss:"
+    )
+    return response
+
+
 x18    = X18Client()
 mic    = RoomMic()
 engine = MixerEngine(x18)
