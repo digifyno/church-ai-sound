@@ -10,7 +10,7 @@ import threading
 import json
 from datetime import datetime, date
 
-from config import ANALYSIS_INTERVAL, AI_LOG_FILE, AI_PRICE_INPUT, AI_PRICE_OUTPUT, MAX_DAILY_COST_USD
+from config import ANALYSIS_INTERVAL, AI_LOG_FILE, AI_MODEL, AI_PRICE_INPUT, AI_PRICE_OUTPUT, MAX_DAILY_COST_USD
 
 log = logging.getLogger(__name__)
 
@@ -128,7 +128,7 @@ class AIEngine:
         try:
             t0 = time.time()
             resp = self._client.messages.create(
-                model="claude-haiku-4-5-20251001",
+                model=AI_MODEL,
                 max_tokens=150,
                 messages=[{"role": "user", "content": prompt_text}],
             )
@@ -147,7 +147,7 @@ class AIEngine:
 
             self._log({
                 "ts":             datetime.now().isoformat(),
-                "model":          "claude-haiku-4-5-20251001",
+                "model":          AI_MODEL,
                 "input_tokens":   input_tokens,
                 "output_tokens":  output_tokens,
                 "cost_usd":       round(cost, 6),
@@ -161,11 +161,12 @@ class AIEngine:
             return answer
 
         except Exception as e:
+            log.exception("AI analysis failed")
             self._log({
                 "ts":    datetime.now().isoformat(),
                 "error": str(e),
             })
-            return f"AI error: {e}"
+            return "AI analysis temporarily unavailable."
 
     def _loop(self):
         while self._running:
