@@ -23,7 +23,7 @@ import time
 import signal
 import sys
 
-from config import WEB_PORT
+from config import WEB_PORT, SOCKETIO_CORS_ORIGINS
 from x18 import X18Client
 from room_mic import RoomMic
 from mixer_engine import MixerEngine
@@ -36,7 +36,7 @@ if not _secret:
     _secret = _secrets.token_hex(32)
     log.warning("FLASK_SECRET_KEY not set — using a random key (sessions won't persist across restarts)")
 app.config["SECRET_KEY"] = _secret
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+socketio = SocketIO(app, cors_allowed_origins=SOCKETIO_CORS_ORIGINS, async_mode="eventlet")
 
 x18    = X18Client()
 mic    = RoomMic()

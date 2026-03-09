@@ -56,6 +56,10 @@ HOLD_ZONE  = 1.0   # ±dB: close enough, don't adjust
 # Room mic
 BLOCK_SIZE = 4096  # audio capture block size (~85ms at 48 kHz)
 
+# WebSocket CORS — defaults to localhost only; set CORS_ORIGINS env var for LAN access
+# e.g. CORS_ORIGINS=http://192.168.8.100:5050
+SOCKETIO_CORS_ORIGINS = _os.environ.get("CORS_ORIGINS", "http://localhost:5050,http://127.0.0.1:5050")
+
 # AI cost accounting (Haiku 4.5 pricing, per million tokens)
 AI_LOG_FILE      = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "ai_log.jsonl")
 AI_PRICE_INPUT   = 0.80   # $0.80 / 1M input tokens
