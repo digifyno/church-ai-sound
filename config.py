@@ -4,8 +4,8 @@ Central configuration for Church AI Sound.
 
 import os as _os
 
-MIXER_IP   = "192.168.8.18"
-MIXER_PORT = 10024
+MIXER_IP   = _os.environ.get("MIXER_IP",   "192.168.8.18")
+MIXER_PORT = int(_os.environ.get("MIXER_PORT", "10024"))
 WEB_PORT   = 5050
 
 # Channel roles — determines target levels and scene detection.

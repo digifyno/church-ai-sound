@@ -35,7 +35,7 @@ Coverage:
 
 Safety-critical paths tested: fader ceiling enforcement, hold-zone logic, runaway detection.
 
-Requires `.env` with `ANTHROPIC_API_KEY` and `FLASK_SECRET_KEY` (see `.env.example`). Install deps:
+Requires `.env` with `ANTHROPIC_API_KEY` and `FLASK_SECRET_KEY` (see `.env.example`). Optional env vars: `MIXER_IP` (default `192.168.8.18`), `MIXER_PORT` (default `10024`), `CORS_ORIGINS`. Install deps:
 ```bash
 pip3 install -r requirements.txt
 ```
