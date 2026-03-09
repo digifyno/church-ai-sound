@@ -163,7 +163,22 @@ def main():
 
     x = X18Client()
     x.start()
-    time.sleep(3)
+
+    # Register safety handler before any blocking sleep so Ctrl+C during
+    # startup doesn't kill the process without a chance to clean up.
+    backup_taken = [False]
+
+    def on_exit(*_):
+        print("\nStopping — restoring backup...")
+        if backup_taken[0]:
+            restore_backup(x)
+        x.stop()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, on_exit)
+    signal.signal(signal.SIGTERM, on_exit)
+
+    time.sleep(3)  # wait for OSC connection to settle
 
     print("Church AI Auto-Mixer — LIVE")
     print(f"  Mixer: {x.connected and 'connected' or 'offline'}")
@@ -173,17 +188,9 @@ def main():
 
     # Save backup before any changes
     backup = save_backup(x)
+    backup_taken[0] = True
     print(f"Backup saved ({len(backup)} channels)")
     print("Press Ctrl+C to stop and restore.\n")
-
-    def on_exit(*_):
-        print("\nStopping — restoring backup...")
-        restore_backup(x)
-        x.stop()
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, on_exit)
-    signal.signal(signal.SIGTERM, on_exit)
 
     cycle = 0
     consecutive_raises: dict[int, int] = {}
