@@ -49,7 +49,12 @@ def save_backup(client: X18Client, path=None):
             "name": c["name"], "fader": c["fader"],
             "fader_db": c["fader_db"], "on": c["on"],
         }
-    with open(path, "w") as f:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+    with os.fdopen(fd, "w") as f:
         json.dump(backup, f, indent=2)
     return backup
 
