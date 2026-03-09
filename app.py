@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 from flask_socketio import SocketIO
 import threading
 import time
@@ -51,6 +51,15 @@ ai     = AIEngine(
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/health")
+def health():
+    return jsonify({
+        "status": "ok",
+        "mixer_connected": x18.connected,
+        "ai_active": ai._running,
+    })
 
 
 def push_loop():
