@@ -265,7 +265,9 @@ function chs(data) {
     }
 
     row.className = `cr ${s==="s"?"":s}`;
-    $(`n${ch}`).className = `cname ${s==="s"?"s":""}`;
+    const nEl = $(`n${ch}`);
+    nEl.textContent = c.name;
+    nEl.className = `cname ${s==="s"?"s":""}`;
     const bar = $(`b${ch}`);
     bar.style.width = `${p}%`;
     bar.className = `mb ${bc(db)}`;
