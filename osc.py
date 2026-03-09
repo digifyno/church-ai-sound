@@ -53,6 +53,9 @@ def parse_message(data: bytes):
                 v, o = read_str(data, o); vals.append(("s", v))
             elif t == "b":
                 size = struct.unpack(">i", data[o:o+4])[0]; o += 4
+                if size < 0 or size > 4096:
+                    log.warning("OSC blob size %d out of range, skipping message", size)
+                    return None, []
                 vals.append(("b", data[o:o+size]))
                 o += size + (4 - size % 4) % 4
         return addr, vals

@@ -106,3 +106,26 @@ def test_parse_meter_blob_values():
     blob = struct.pack("<i", 1) + struct.pack("<h", 256)
     levels = parse_meter_blob(blob)
     assert levels == [pytest.approx(1.0)]
+
+
+# ── blob size cap (security) ──
+
+def test_parse_message_blob_oversized_returns_none():
+    # Craft a message with blob size field = 10_000_000 to trigger OOM guard
+    addr = b"/meters\x00"  # 8 bytes (aligned)
+    tags = b",b\x00\x00"   # 4 bytes (aligned)
+    blob_size = struct.pack(">i", 10_000_000)
+    data = addr + tags + blob_size
+    addr_out, vals = parse_message(data)
+    assert addr_out is None
+    assert vals == []
+
+
+def test_parse_message_blob_negative_size_returns_none():
+    addr = b"/meters\x00"
+    tags = b",b\x00\x00"
+    blob_size = struct.pack(">i", -1)
+    data = addr + tags + blob_size
+    addr_out, vals = parse_message(data)
+    assert addr_out is None
+    assert vals == []
