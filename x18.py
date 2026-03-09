@@ -177,7 +177,10 @@ class X18Client:
         """Refresh names/faders/mutes every 30s, independent of receive loop."""
         time.sleep(1)  # let socket settle
         while self._running:
-            self._read_channel_meta()
+            try:
+                self._read_channel_meta()
+            except Exception:
+                log.exception("_meta_loop: channel metadata refresh failed")
             time.sleep(30)
 
     def _run(self):
