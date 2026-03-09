@@ -83,7 +83,9 @@ class MixerEngine:
             if not info["active"] or not info["on"]:
                 continue
 
-            role       = CHANNEL_ROLES.get(ch, "unknown")
+            role = CHANNEL_ROLES.get(ch)
+            if role is None:
+                continue  # skip unmapped channels (9-14, etc.)
             target_db  = ROLE_TARGETS[role]
             input_db   = info["db"]
             fader_db   = info["fader_db"]

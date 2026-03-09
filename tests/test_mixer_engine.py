@@ -97,6 +97,12 @@ def test_simulate_produces_proposal_for_active_channel():
     assert "proposed_fader_db" in p
 
 
+def test_simulate_excludes_unmapped_channel():
+    # Channels 9-14 are not in CHANNEL_ROLES; they must never appear in proposals
+    snap = {10: {"active": True, "on": True, "db": -20, "fader_db": 0.0, "name": "aux10"}}
+    assert MixerEngine._simulate(snap) == {}
+
+
 def test_simulate_excludes_ch17_ch18():
     # Channels 17-18 are aux/bus and not in CHANNEL_ROLES; they must never appear in proposals
     snap = {
