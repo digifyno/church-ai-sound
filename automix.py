@@ -60,8 +60,13 @@ def restore_backup(client: X18Client, path=None):
     if not os.path.exists(path):
         print(f"No backup found at {path}. Nothing to restore.")
         return
-    with open(path) as f:
-        backup = json.load(f)
+    try:
+        with open(path) as f:
+            backup = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        log.error("Cannot read backup file %s: %s", path, e)
+        log.error("Faders NOT restored — manual recovery required.")
+        return
     for ch_str, info in backup.items():
         ch = int(ch_str)
         if ch < 1 or ch > 16:
