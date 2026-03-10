@@ -95,7 +95,9 @@ class AIEngine:
 
     def _log(self, entry: dict):
         try:
-            with open(AI_LOG_FILE, "a") as f:
+            import os
+            fd = os.open(AI_LOG_FILE, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            with os.fdopen(fd, "a") as f:
                 f.write(json.dumps(entry) + "\n")
         except Exception:
             log.warning("Failed to write AI log entry", exc_info=True)
