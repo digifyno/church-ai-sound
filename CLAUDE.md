@@ -43,7 +43,10 @@ pip3 install -r requirements.txt
 ## Architecture
 
 All components are **thread-safe** (lock-protected shared state) and communicate
-through snapshot reads — no blocking, no shared mutable references.
+through snapshot reads — no blocking, no shared mutable references. All engine
+classes (`X18Client`, `MixerEngine`, `AIEngine`) use a `threading.Event`
+(`_stop_event`) alongside a `_running` bool for clean, fast shutdown — loop
+sleeps use `_stop_event.wait(interval)` so they exit immediately on stop.
 
 **Data flow:**
 ```
@@ -60,7 +63,7 @@ Room mic → room_mic.py ──→ app.py (push_loop, 7Hz SocketIO) → browser
 - `x18.py` — X18Client: meter subscription, fader/name/mute reads, write commands.
 - `config.py` — All hardcoded values (mixer IP, channel roles, target levels).
 - `mixer_engine.py` — Computes `output = input_meter + fader_db`, compares to role targets.
-- `ai_engine.py` — Claude API calls with full cost logging to `ai_log.jsonl`.
+- `ai_engine.py` — Claude API calls with full cost logging to `ai_log.jsonl` (created mode 0o600).
 
 ## OSC Protocol Gotchas
 
@@ -73,6 +76,12 @@ Room mic → room_mic.py ──→ app.py (push_loop, 7Hz SocketIO) → browser
 - **All float params are 0.0–1.0 normalized.** EQ freq, gain, Q, compressor
   threshold, etc. See `docs/X18_OSC_REFERENCE.md` for real-world mappings.
 - **Query = send address with no args.** Set = send address with value arg.
+- **`_query()` verifies response address.** The helper discards any response
+  whose address doesn't match the queried address, preventing stale or
+  mismatched packets from being silently accepted as valid replies.
+- **Log files use restricted permissions.** `ai_log.jsonl` and
+  `automix_log.jsonl` are created via `os.open(..., 0o600)` so they are
+  owner-readable only — never world-readable.
 
 ## Simulation vs Live
 
