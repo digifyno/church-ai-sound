@@ -129,7 +129,9 @@ class X18Client:
         sock.sendto(build_message(address), (MIXER_IP, MIXER_PORT))
         try:
             data, _ = sock.recvfrom(1024)
-            _, vals = parse_message(data)
+            resp_addr, vals = parse_message(data)
+            if resp_addr != address:
+                return None
             for t, v in vals:
                 if t == expected_type:
                     return v

@@ -118,6 +118,45 @@ def test_get_snapshot_channel_keys():
         assert "name" in snap[ch]
 
 
+# ── _query: address verification ─────────────────────────────────────────────
+
+def test_query_returns_none_on_address_mismatch():
+    """Response from a different OSC address must be silently discarded."""
+    from osc import build_message
+    client = X18Client()
+    sock = MagicMock()
+    # Response address is /ch/02/mix/fader but we queried /ch/01/mix/fader
+    sock.recvfrom.return_value = (
+        build_message("/ch/02/mix/fader", ("f", 0.75)),
+        ("192.168.8.18", 10024),
+    )
+    result = client._query(sock, "/ch/01/mix/fader", "f")
+    assert result is None
+
+
+def test_query_returns_value_on_address_match():
+    """Correct address response must return the expected value."""
+    from osc import build_message
+    client = X18Client()
+    sock = MagicMock()
+    sock.recvfrom.return_value = (
+        build_message("/ch/01/mix/fader", ("f", 0.75)),
+        ("192.168.8.18", 10024),
+    )
+    result = client._query(sock, "/ch/01/mix/fader", "f")
+    assert result == pytest.approx(0.75, abs=1e-5)
+
+
+def test_query_returns_none_on_timeout():
+    """Socket timeout must result in None."""
+    import socket
+    client = X18Client()
+    sock = MagicMock()
+    sock.recvfrom.side_effect = socket.timeout
+    result = client._query(sock, "/ch/01/mix/fader", "f")
+    assert result is None
+
+
 # ── Connection state ──────────────────────────────────────────────────────────
 
 def test_connected_false_before_start():
