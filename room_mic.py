@@ -68,14 +68,6 @@ class RoomMic:
             rms = float(np.sqrt(np.mean(samples ** 2)))
             db  = float(20 * np.log10(rms + 1e-9))
 
-            # ── Peak with time-based ballistic decay ──
-            now = time.time()
-            dt  = now - self._last_time
-            self._last_time = now
-            # Decay ~12 dB/sec (professional VU-style)
-            decay = 12.0 * dt
-            self._peak_db = max(db, self._peak_db - decay)
-
             # ── FFT dominant frequencies ──
             window  = samples * np.hanning(len(samples))
             fft_mag = np.abs(np.fft.rfft(window))
@@ -97,7 +89,14 @@ class RoomMic:
             zcr = float(np.mean(np.diff(np.sign(samples)) != 0))
             speech = bool(db > -40 and 0.02 < zcr < 0.35)
 
+            # ── Peak with time-based ballistic decay (inside lock) ──
+            now = time.time()
             with self._lock:
+                dt  = now - self._last_time
+                self._last_time = now
+                # Decay ~12 dB/sec (professional VU-style)
+                decay = 12.0 * dt
+                self._peak_db = max(db, self._peak_db - decay)
                 self._state = {
                     "db":              round(db, 1),
                     "peak_db":         round(self._peak_db, 1),
