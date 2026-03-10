@@ -17,6 +17,25 @@ S.on("state", d => {
   if (d.suggestion) ai(d.suggestion, d.time);
   if (d.ai_stats) aiStats(d.ai_stats);
   if (d.sim) scene(d.sim);
+  modeUpdate(d.live);
+});
+
+function modeUpdate(live) {
+  const btn = $("mode-btn");
+  if (live) {
+    btn.textContent = "LIVE";
+    btn.className = "badge b-live";
+  } else {
+    btn.textContent = "SIMULATION";
+    btn.className = "badge b-sim";
+  }
+}
+
+$("mode-btn").addEventListener("click", function() {
+  fetch("/api/mode", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"})
+    .then(r => r.json())
+    .then(d => { if (d.error) alert(d.error); })
+    .catch(e => alert("Failed: " + e));
 });
 
 function $(id) { return document.getElementById(id); }

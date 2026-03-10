@@ -14,7 +14,10 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 .logo-sub{font-size:10px;color:var(--muted)}
 .hdr-r{display:flex;align-items:center;gap:12px}
 .badge{padding:3px 8px;border-radius:16px;font-size:9px;font-weight:700;letter-spacing:.5px}
-.b-sim{background:#2a1f00;color:#f0a030;border:1px solid #5a4010}
+.b-sim{background:#2a1f00;color:#f0a030;border:1px solid #5a4010;cursor:pointer;font-family:inherit;font-size:9px;font-weight:700;letter-spacing:.5px}
+.b-sim:hover{background:#3a2f10}
+.b-live{background:#1a2a0e;color:var(--green);border:1px solid #2a4a18;cursor:pointer;font-family:inherit;font-size:9px;font-weight:700;letter-spacing:.5px}
+.b-live:hover{background:#2a3a1e}
 .b-conn{border:1px solid var(--border)}
 .b-conn.on{background:#0e2a18;color:var(--green);border-color:#1a4a28}
 .b-conn.off{background:#2a0e0e;color:var(--red);border-color:#4a1818;animation:blink 1.5s infinite}
@@ -102,6 +105,11 @@ main{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 72px);over
 .ai-lbl{font-size:9px;color:var(--accent);font-weight:700;letter-spacing:1px}
 #ai-text{font-size:11px;line-height:1.6;min-height:44px}
 .ai-ts{font-size:9px;color:var(--muted);margin-top:6px}
+.ai-stats{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap}
+.ai-stat{font-size:9px;color:var(--muted)}
+.ai-stat-val{color:var(--text)}
+.ai-stat-cost{color:var(--yellow)}
+.health-label{color:var(--muted)}
 
 /* ── Room mic ── */
 .room-db{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin:4px 0}

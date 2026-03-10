@@ -16,7 +16,7 @@
     <div><div class="logo-name">Church AI Sound</div><div class="logo-sub">X-AIR X18</div></div>
   </div>
   <div class="hdr-r">
-    <span class="badge b-sim">SIMULATION</span>
+    <button class="badge b-sim" id="mode-btn">SIMULATION</button>
     <span class="badge b-conn off" id="conn">OFFLINE</span>
     <span id="clock">--:--:--</span>
   </div>
@@ -27,7 +27,7 @@
 <div class="scene-bar">
   <div><span class="scene-l">SCENE:</span><span id="scene">—</span></div>
   <div class="health">
-    <span style="color:var(--muted)">HEALTH</span>
+    <span class="health-label">HEALTH</span>
     <div class="h-bg"><div class="h-bar green" id="h-bar"></div></div>
     <span id="h-lbl">—</span>
   </div>
@@ -52,10 +52,10 @@
       <div class="ai-h"><div class="ai-dot"></div><div class="ai-lbl">AI TECHNICIAN</div></div>
       <div id="ai-text">Connecting...</div>
       <div class="ai-ts" id="ai-ts"></div>
-      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
-        <span style="font-size:9px;color:var(--muted)">Requests: <span id="ai-req" style="color:var(--text)">0</span></span>
-        <span style="font-size:9px;color:var(--muted)">Tokens: <span id="ai-tok" style="color:var(--text)">0</span></span>
-        <span style="font-size:9px;color:var(--muted)">Cost: <span id="ai-cost" style="color:var(--yellow)">$0.000</span></span>
+      <div class="ai-stats">
+        <span class="ai-stat">Requests: <span id="ai-req" class="ai-stat-val">0</span></span>
+        <span class="ai-stat">Tokens: <span id="ai-tok" class="ai-stat-val">0</span></span>
+        <span class="ai-stat">Cost: <span id="ai-cost" class="ai-stat-cost">$0.000</span></span>
       </div>
     </div>
 

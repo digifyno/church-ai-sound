@@ -23,7 +23,9 @@ import time
 import signal
 import sys
 
-from config import WEB_PORT, SOCKETIO_CORS_ORIGINS
+from config import (WEB_PORT, SOCKETIO_CORS_ORIGINS, CHANNEL_ROLES, ROLE_TARGETS,
+                    SILENCE_DB, MAX_STEP_DB, CYCLE_SEC, HOLD_ZONE, FADER_CEIL_DB,
+                    MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB)
 
 # Derive WebSocket origins from CORS origins for CSP connect-src
 _WS_ORIGINS = " ".join(
@@ -35,6 +37,7 @@ from x18 import X18Client
 from room_mic import RoomMic
 from mixer_engine import MixerEngine
 from ai_engine import AIEngine
+from automix import auto_mix_step, save_backup, restore_backup
 
 app = Flask(__name__)
 import os, secrets as _secrets
@@ -43,7 +46,7 @@ if not _secret:
     _secret = _secrets.token_hex(32)
     log.warning("FLASK_SECRET_KEY not set — using a random key (sessions won't persist across restarts)")
 app.config["SECRET_KEY"] = _secret
-socketio = SocketIO(app, cors_allowed_origins=SOCKETIO_CORS_ORIGINS, async_mode="eventlet")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 
 @app.after_request
@@ -53,8 +56,8 @@ def set_security_headers(response):
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
         "script-src 'self'; "
-        "style-src 'self'; "
-        f"connect-src 'self' {_WS_ORIGINS}"
+        "style-src 'self' 'unsafe-inline'; "
+        "connect-src 'self' ws: wss:"
     )
     return response
 
@@ -79,6 +82,61 @@ def index():
 @app.route("/favicon.ico")
 def favicon():
     return redirect("/static/favicon.svg", code=301)
+
+
+# ── Live mode state ──
+_live_mode = False
+_live_lock = threading.Lock()
+_live_backup = None
+_consecutive_raises: dict[int, int] = {}
+_input_history: dict[int, list] = {}
+
+
+def _automix_loop():
+    """Background loop that applies fader changes when live mode is on."""
+    global _live_mode
+    while not _shutdown.is_set():
+        if _live_mode and x18.connected:
+            try:
+                auto_mix_step(x18, _consecutive_raises, _input_history)
+            except Exception:
+                log.exception("automix_loop error")
+        if _shutdown.wait(CYCLE_SEC):
+            break
+
+
+@app.route("/api/mode", methods=["GET"])
+def get_mode():
+    return jsonify({"live": _live_mode})
+
+
+@app.route("/api/mode", methods=["POST"])
+def toggle_mode():
+    global _live_mode, _live_backup
+    from flask import request
+    data = request.get_json(silent=True) or {}
+    want_live = data.get("live", not _live_mode)
+
+    with _live_lock:
+        if want_live and not _live_mode:
+            # Entering live mode — save backup
+            if x18.connected:
+                _live_backup = save_backup(x18)
+                _consecutive_raises.clear()
+                _input_history.clear()
+                log.info("LIVE MODE ON — backup saved")
+            else:
+                return jsonify({"error": "Mixer not connected"}), 400
+            _live_mode = True
+        elif not want_live and _live_mode:
+            # Exiting live mode — restore backup
+            _live_mode = False
+            if _live_backup and x18.connected:
+                restore_backup(x18)
+                log.info("LIVE MODE OFF — backup restored")
+            _live_backup = None
+
+    return jsonify({"live": _live_mode})
 
 
 @app.route("/health")
@@ -106,6 +164,7 @@ def push_loop():
                 "sim":        sim,
                 "ai_stats":   ai.get_stats(),
                 "connected":  x18.connected,
+                "live":       _live_mode,
                 "time":       time.strftime("%H:%M:%S"),
             })
         except Exception:
@@ -139,10 +198,12 @@ if __name__ == "__main__":
     ai.start()
 
     threading.Thread(target=push_loop, daemon=True).start()
+    threading.Thread(target=_automix_loop, daemon=True).start()
 
     socketio.run(
         app,
         host="0.0.0.0",
         port=WEB_PORT,
         debug=False,
+        allow_unsafe_werkzeug=True,
     )
