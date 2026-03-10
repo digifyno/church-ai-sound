@@ -222,9 +222,14 @@ def main():
     print(f"  Fader ceiling: {FADER_CEIL_DB} dB")
     print()
 
-    # Save backup before any changes
-    backup = save_backup(x)
-    backup_taken[0] = True
+    # Save backup before any changes.
+    # Set backup_taken in a finally block so on_exit() always attempts
+    # restoration even if save_backup() raises (e.g. mixer offline).
+    backup = None
+    try:
+        backup = save_backup(x)
+    finally:
+        backup_taken[0] = True
     print(f"Backup saved ({len(backup)} channels)")
     print("Press Ctrl+C to stop and restore.\n")
 

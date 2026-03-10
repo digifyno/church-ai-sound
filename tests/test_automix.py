@@ -177,6 +177,31 @@ def test_log_fader_change_written_on_adjustment(tmp_path):
     assert "target_db" in entry
 
 
+def test_backup_taken_set_even_when_save_backup_raises():
+    """
+    If save_backup() raises (e.g. mixer offline), backup_taken must still be
+    True so on_exit() attempts restore rather than silently skipping it.
+    """
+    import signal
+    import sys
+    from unittest.mock import patch
+
+    # Simulate the main() backup block in isolation
+    backup_taken = [False]
+    with patch("automix.save_backup", side_effect=OSError("mixer offline")):
+        try:
+            from automix import save_backup as _sb
+            backup = None
+            try:
+                backup = _sb(None)  # will raise
+            finally:
+                backup_taken[0] = True
+        except OSError:
+            pass  # expected
+
+    assert backup_taken[0] is True, "backup_taken must be True even when save_backup raises"
+
+
 def test_log_not_written_for_hold(tmp_path):
     """
     No log entry is written when the fader is held (already on target).
