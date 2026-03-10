@@ -18,7 +18,7 @@ import time
 
 log = logging.getLogger(__name__)
 
-from config import MIXER_IP, MIXER_PORT
+from config import MIXER_IP, MIXER_PORT, SILENCE_DB
 from osc import build_message, parse_message, parse_meter_blob, fader_to_db
 
 
@@ -114,7 +114,7 @@ class X18Client:
                     "fader":    round(fader_val, 3),
                     "fader_db": round(fader_to_db(fader_val), 1),
                     "on":       self._mutes.get(ch, True),
-                    "active":   db > -55,
+                    "active":   db > SILENCE_DB,
                 }
             return channels
 
