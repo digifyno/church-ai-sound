@@ -17,9 +17,9 @@ python3 app.py                  # → http://localhost:5050
 # Live auto-mix (writes faders, Ctrl+C restores backup)
 python3 automix.py
 
-# Diagnostics (TODO: not yet implemented)
-# python3 read_x18.py           # Query mixer info
-# python3 monitor.py            # Terminal meter display
+# Diagnostics
+python3 read_x18.py             # Query mixer info (channel summary table)
+# python3 monitor.py            # Terminal meter display (TODO: not yet implemented)
 ```
 
 ## Testing
