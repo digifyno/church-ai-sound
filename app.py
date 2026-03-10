@@ -148,28 +148,39 @@ def health():
     })
 
 
-def push_loop():
-    """Broadcast state to all connected clients ~7 times/sec."""
+_slow_cache = {}
+
+def _slow_loop():
+    """Update slow-changing data (AI, sim, room) every 500ms."""
+    global _slow_cache
     while not _shutdown.is_set():
         try:
-            channels   = x18.get_snapshot()
-            room       = mic.get()
-            suggestion = ai.get_suggestion()
-            sim        = engine.get_state()
-
-            socketio.emit("state", {
-                "channels":   channels,
-                "room":       room,
-                "suggestion": suggestion,
-                "sim":        sim,
+            _slow_cache = {
+                "room":       mic.get(),
+                "suggestion": ai.get_suggestion(),
+                "sim":        engine.get_state(),
                 "ai_stats":   ai.get_stats(),
+            }
+        except Exception:
+            log.exception("slow_loop error")
+        if _shutdown.wait(0.5):
+            break
+
+def push_loop():
+    """Broadcast meter state to all connected clients at ~20Hz."""
+    while not _shutdown.is_set():
+        try:
+            payload = {
+                "channels":   x18.get_snapshot(),
                 "connected":  x18.connected,
                 "live":       _live_mode,
                 "time":       time.strftime("%H:%M:%S"),
-            })
+            }
+            payload.update(_slow_cache)
+            socketio.emit("state", payload)
         except Exception:
             log.exception("push_loop error")
-        if _shutdown.wait(0.15):
+        if _shutdown.wait(0.05):
             break
 
 
@@ -197,6 +208,7 @@ if __name__ == "__main__":
     engine.start()
     ai.start()
 
+    threading.Thread(target=_slow_loop, daemon=True).start()
     threading.Thread(target=push_loop, daemon=True).start()
     threading.Thread(target=_automix_loop, daemon=True).start()
 

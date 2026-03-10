@@ -40,6 +40,11 @@ class X18Client:
         # Meter data (dB, pre-fader)
         self._meters_0 = {}          # ch1-8  from /meters/0
         self._meters_1 = {}          # ch1-18 from /meters/1
+        self._meters_0_stuck_count = {}  # consecutive identical readings per ch
+        self._meters_0_prev = {}         # previous /meters/0 value
+        self._meters_0_stuck = set()     # channels whose /meters/0 is frozen
+        _STUCK_THRESHOLD = 3             # readings to mark stuck
+        _UNSTICK_THRESHOLD = 5           # different readings to clear stuck
 
         # Channel metadata (read once on connect, refreshed periodically)
         self._names  = {}            # ch -> str
@@ -110,7 +115,10 @@ class X18Client:
             channels = {}
             for ch in range(1, 19):
                 # Best meter source: /meters/0 for 1-8, /meters/1 for 9-18
-                if ch <= 8 and ch in self._meters_0:
+                # Exception: if /meters/0 is frozen (same value every update),
+                # the channel likely has a wireless receiver with transmitter
+                # off — fall back to /meters/1 (post-fader) for real levels.
+                if ch <= 8 and ch in self._meters_0 and ch not in self._meters_0_stuck:
                     db = self._meters_0[ch]
                 elif ch in self._meters_1:
                     db = self._meters_1[ch]
@@ -223,7 +231,22 @@ class X18Client:
                         self._connected = True
                         if addr == "/meters/0":
                             for i, db in enumerate(levels[:8]):
-                                self._meters_0[i+1] = db
+                                ch = i + 1
+                                # Detect stuck meters (wireless receivers with transmitter off)
+                                prev = self._meters_0_prev.get(ch)
+                                if prev is not None and db == prev:
+                                    cnt = self._meters_0_stuck_count.get(ch, 0) + 1
+                                    self._meters_0_stuck_count[ch] = cnt
+                                    if cnt >= 3:  # stuck after 3 identical readings
+                                        self._meters_0_stuck.add(ch)
+                                else:
+                                    cnt = self._meters_0_stuck_count.get(ch, 0) - 1
+                                    self._meters_0_stuck_count[ch] = max(0, cnt)
+                                    if cnt <= -5:  # clear after 5 different readings
+                                        self._meters_0_stuck.discard(ch)
+                                        self._meters_0_stuck_count[ch] = 0
+                                self._meters_0_prev[ch] = db
+                                self._meters_0[ch] = db
                         elif addr == "/meters/1":
                             for i, db in enumerate(levels[:min(18, len(levels))]):
                                 self._meters_1[i+1] = db

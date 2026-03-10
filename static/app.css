@@ -37,8 +37,32 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 .h-bar{height:100%;border-radius:3px;transition:width .4s}
 #h-lbl{font-size:10px}
 
+/* ── Meter Bridge ── */
+.meter-bridge{background:#080a0f;border-bottom:1px solid var(--border);padding:8px 12px;display:flex;gap:4px;overflow-x:auto}
+.meter-scale{display:flex;flex-direction:column;justify-content:space-between;padding:0 4px 18px 0;font-size:8px;color:var(--muted);min-width:20px;text-align:right;height:120px}
+.meter-channels{display:flex;gap:3px;flex:1}
+.vm{display:flex;flex-direction:column;align-items:center;min-width:44px;flex:1}
+.vm-strip{display:flex;gap:2px;width:100%;height:120px}
+.vm-bar-wrap{position:relative;flex:1;background:#0a0c12;border-radius:2px;overflow:hidden;border:1px solid #1a1e28}
+.vm-fader-track{position:relative;width:14px;background:#0a0c12;border-radius:2px;border:1px solid #1a1e28}
+.vm-fader-track::before{content:'';position:absolute;left:50%;top:8%;bottom:8%;width:2px;margin-left:-1px;background:#1a1e28}
+.vm-fader-knob{position:absolute;left:-2px;right:-2px;height:10px;background:linear-gradient(180deg,#c0c8e0,#8890a8);border-radius:2px;border:1px solid #a0a8c0;box-shadow:0 1px 3px rgba(0,0,0,0.5);transition:bottom 40ms linear}
+.vm-fader-db{font-size:7px;color:#606880;font-variant-numeric:tabular-nums;margin-top:1px}
+.vm-fill{position:absolute;bottom:0;left:0;right:0;border-radius:0 0 2px 2px;transition:height 40ms linear}
+.vm-peak{position:absolute;left:0;right:0;height:2px;transition:bottom 40ms linear}
+.vm-seg-red{position:absolute;top:0;left:0;right:0;height:10%;background:linear-gradient(180deg,rgba(231,76,60,0.15),transparent)}
+.vm-seg-yel{position:absolute;top:10%;left:0;right:0;height:10%;background:linear-gradient(180deg,rgba(241,196,15,0.08),transparent)}
+.vm-name{font-size:8px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48px;text-align:center}
+.vm-db{font-size:8px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:1px}
+.vm.active .vm-name{color:var(--text)}
+.vm.active .vm-db{color:var(--green)}
+.vm.hot .vm-db{color:var(--yellow)}
+.vm.clip .vm-db{color:var(--red)}
+.vm.muted .vm-bar-wrap{opacity:0.3}
+.vm.muted .vm-name{text-decoration:line-through}
+
 /* ── Layout ── */
-main{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 72px);overflow:hidden}
+main{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 72px - 160px);overflow:hidden}
 
 /* ── Left: meters ── */
 .left{overflow-y:auto;padding:14px 16px;border-right:1px solid var(--border)}
@@ -55,7 +79,7 @@ main{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 72px);over
 
 /* Meter */
 .mw{position:relative;height:12px;background:#080a0f;border-radius:3px;overflow:hidden}
-.mb{height:100%;width:0%;border-radius:3px;transition:width .08s ease-out}
+.mb{height:100%;width:0%;border-radius:3px;transition:width 40ms linear}
 .mw::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(90deg,transparent,transparent calc(25% - 1px),#141820 25%)}
 .green{background:linear-gradient(90deg,#1a6a30,var(--green))}
 .yellow{background:linear-gradient(90deg,#806000,var(--yellow))}

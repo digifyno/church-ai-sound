@@ -12,6 +12,7 @@ S.on("state", d => {
   $("clock").textContent = d.time;
   conn(d.connected);
   chs(d.channels);
+  vMeters(d.channels);
   sim(d.sim);
   room(d.room);
   if (d.suggestion) ai(d.suggestion, d.time);
@@ -42,6 +43,63 @@ function $(id) { return document.getElementById(id); }
 function pct(db) { return Math.max(0, Math.min(100, (db + 60) / 66 * 100)); }
 function bc(db)  { return db > -6 ? "red" : db > -18 ? "yellow" : "green"; }
 function st(db)  { return db <= -55 ? "s" : db > -6 ? "clip" : db > -18 ? "hot" : "active"; }
+
+// ── Vertical meter bridge ──
+const _peaks = {};
+function vMeters(data) {
+  const wrap = $("meter-chs");
+  if (!wrap) return;
+  const keys = Object.keys(data).map(Number).sort((a,b)=>a-b);
+  keys.forEach(ch => {
+    const c = data[ch], db = c.db, p = pct(db), s = st(db);
+    const muted = !c.on;
+    const dbStr = s === "s" ? "" : db.toFixed(0);
+
+    // Peak hold: decay 2%/frame
+    const prev = _peaks[ch] || 0;
+    const peak = Math.max(p, prev - 2);
+    _peaks[ch] = peak;
+
+    const faderPct = Math.max(0, Math.min(100, (c.fader_db + 60) / 70 * 100));
+    const faderStr = c.fader_db > -90 ? (c.fader_db > 0 ? "+" : "") + c.fader_db.toFixed(0) : "-inf";
+
+    let el = $(`vm${ch}`);
+    if (!el) {
+      el = document.createElement("div");
+      el.id = `vm${ch}`;
+      el.innerHTML =
+        '<div class="vm-strip">' +
+          '<div class="vm-bar-wrap">' +
+            '<div class="vm-seg-red"></div><div class="vm-seg-yel"></div>' +
+            '<div class="vm-fill" id="vf' + ch + '"></div>' +
+            '<div class="vm-peak" id="vp' + ch + '"></div>' +
+          '</div>' +
+          '<div class="vm-fader-track">' +
+            '<div class="vm-fader-knob" id="vk' + ch + '"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="vm-name" id="vn' + ch + '">' + esc(c.name) + '</div>' +
+        '<div class="vm-db" id="vd' + ch + '"></div>' +
+        '<div class="vm-fader-db" id="vfdb' + ch + '"></div>';
+      el.className = "vm";
+      wrap.appendChild(el);
+    }
+
+    el.className = "vm" + (muted ? " muted" : s !== "s" ? " " + s : "");
+    const fill = $(`vf${ch}`);
+    fill.style.height = p + "%";
+    fill.style.background = db > -6 ? "linear-gradient(0deg,#c0392b,#e74c3c)" :
+                             db > -18 ? "linear-gradient(0deg,#c89000,#f1c40f)" :
+                             "linear-gradient(0deg,#1a6a30,#2ecc71)";
+    const pk = $(`vp${ch}`);
+    pk.style.bottom = peak + "%";
+    pk.style.background = peak > 90 ? "var(--red)" : peak > 70 ? "var(--yellow)" : "var(--green)";
+    $(`vk${ch}`).style.bottom = faderPct + "%";
+    $(`vn${ch}`).textContent = c.name;
+    $(`vd${ch}`).textContent = dbStr;
+    $(`vfdb${ch}`).textContent = faderStr;
+  });
+}
 
 function conn(ok) {
   const el = $("conn");
