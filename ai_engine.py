@@ -63,10 +63,11 @@ class AIEngine:
         import anthropic
         self._client = anthropic.Anthropic(api_key=api_key)
 
+        today_cost = self._load_today_cost()  # file I/O outside lock
         with self._lock:
-            self._total_cost = self._load_today_cost()
-            if self._total_cost > 0:
-                log.info("Recovered today's AI cost from log: $%.4f", self._total_cost)
+            self._total_cost = today_cost
+        if today_cost > 0:
+            log.info("Recovered today's AI cost from log: $%.4f", today_cost)
 
         self._stop_event.clear()
         self._running = True
