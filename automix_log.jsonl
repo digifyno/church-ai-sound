@@ -54,3 +54,11 @@
 {"ts": "2026-03-10T09:19:04.251996", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -10.0, "fader_after_db": -8.0, "delta_db": 2.0, "input_db": -20.0, "target_db": -18.0, "role": "vocal"}
 {"ts": "2026-03-10T09:19:04.253288", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -1.0, "fader_after_db": 0.0, "delta_db": 2.0, "input_db": -30.0, "target_db": -18.0, "role": "vocal"}
 {"ts": "2026-03-10T09:19:04.253993", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -10.0, "fader_after_db": -8.0, "delta_db": 2.0, "input_db": -30.0, "target_db": -18.0, "role": "vocal"}
+{"ts": "2026-03-10T12:56:52.824701", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -20.0, "fader_after_db": -18.0, "delta_db": 2.0, "input_db": -20.0, "target_db": -18.0, "role": "vocal"}
+{"ts": "2026-03-10T12:56:52.825198", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -18.0, "fader_after_db": -16.0, "delta_db": 2.0, "input_db": -20.5, "target_db": -18.0, "role": "vocal"}
+{"ts": "2026-03-10T12:56:52.825385", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -16.0, "fader_after_db": -14.0, "delta_db": 2.0, "input_db": -21.0, "target_db": -18.0, "role": "vocal"}
+{"ts": "2026-03-10T12:56:52.825432", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -14.0, "fader_after_db": -12.0, "delta_db": 2.0, "input_db": -21.5, "target_db": -18.0, "role": "vocal"}
+{"ts": "2026-03-10T12:56:52.825516", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -12.0, "fader_after_db": -10.0, "delta_db": 2.0, "input_db": -22.0, "target_db": -18.0, "role": "vocal"}
+{"ts": "2026-03-10T12:56:52.894518", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -10.0, "fader_after_db": -8.0, "delta_db": 2.0, "input_db": -20.0, "target_db": -18.0, "role": "vocal"}
+{"ts": "2026-03-10T12:56:52.895579", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -1.0, "fader_after_db": 0.0, "delta_db": 2.0, "input_db": -30.0, "target_db": -18.0, "role": "vocal"}
+{"ts": "2026-03-10T12:56:52.896067", "ch": 1, "name": "Vocal", "action": "raise", "fader_before_db": -10.0, "fader_after_db": -8.0, "delta_db": 2.0, "input_db": -30.0, "target_db": -18.0, "role": "vocal"}
