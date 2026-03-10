@@ -24,6 +24,13 @@ import signal
 import sys
 
 from config import WEB_PORT, SOCKETIO_CORS_ORIGINS
+
+# Derive WebSocket origins from CORS origins for CSP connect-src
+_WS_ORIGINS = " ".join(
+    ("ws://" + o[7:]) if o.startswith("http://") else ("wss://" + o[8:])
+    for o in SOCKETIO_CORS_ORIGINS
+    if o.startswith(("http://", "https://"))
+)
 from x18 import X18Client
 from room_mic import RoomMic
 from mixer_engine import MixerEngine
@@ -45,9 +52,9 @@ def set_security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "connect-src 'self' ws: wss:"
+        "script-src 'self'; "
+        "style-src 'self'; "
+        f"connect-src 'self' {_WS_ORIGINS}"
     )
     return response
 
