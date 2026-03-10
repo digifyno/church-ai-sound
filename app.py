@@ -1,8 +1,7 @@
 """
-Church AI Sound Technician — Web Dashboard
+Church Sound Technician — Web Dashboard
 
   python3 app.py        → http://localhost:5050
-  SIMULATION MODE       → proposes changes, never writes to the mixer.
 """
 
 from dotenv import load_dotenv
@@ -23,20 +22,9 @@ import time
 import signal
 import sys
 
-from config import (WEB_PORT, SOCKETIO_CORS_ORIGINS, CHANNEL_ROLES, ROLE_TARGETS,
-                    SILENCE_DB, MAX_STEP_DB, CYCLE_SEC, HOLD_ZONE, FADER_CEIL_DB,
-                    MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB)
-
-# Derive WebSocket origins from CORS origins for CSP connect-src
-_WS_ORIGINS = " ".join(
-    ("ws://" + o[7:]) if o.startswith("http://") else ("wss://" + o[8:])
-    for o in SOCKETIO_CORS_ORIGINS
-    if o.startswith(("http://", "https://"))
-)
+from config import (WEB_PORT, CYCLE_SEC)
 from x18 import X18Client
-from room_mic import RoomMic
 from mixer_engine import MixerEngine
-from ai_engine import AIEngine
 from automix import auto_mix_step, save_backup, restore_backup
 
 app = Flask(__name__)
@@ -65,13 +53,7 @@ def set_security_headers(response):
 _shutdown = threading.Event()
 
 x18    = X18Client()
-mic    = RoomMic()
 engine = MixerEngine(x18)
-ai     = AIEngine(
-    get_channels=x18.get_snapshot,
-    get_room=mic.get,
-    get_sim=engine.get_state,
-)
 
 
 @app.route("/")
@@ -119,7 +101,6 @@ def toggle_mode():
 
     with _live_lock:
         if want_live and not _live_mode:
-            # Entering live mode — save backup
             if x18.connected:
                 _live_backup = save_backup(x18)
                 _consecutive_raises.clear()
@@ -129,7 +110,6 @@ def toggle_mode():
                 return jsonify({"error": "Mixer not connected"}), 400
             _live_mode = True
         elif not want_live and _live_mode:
-            # Exiting live mode — restore backup
             _live_mode = False
             if _live_backup and x18.connected:
                 restore_backup(x18)
@@ -144,22 +124,18 @@ def health():
     return jsonify({
         "status": "ok",
         "mixer_connected": x18.connected,
-        "ai_active": ai.running,
     })
 
 
 _slow_cache = {}
 
 def _slow_loop():
-    """Update slow-changing data (AI, sim, room) every 500ms."""
+    """Update slow-changing data (sim) every 500ms."""
     global _slow_cache
     while not _shutdown.is_set():
         try:
             _slow_cache = {
-                "room":       mic.get(),
-                "suggestion": ai.get_suggestion(),
-                "sim":        engine.get_state(),
-                "ai_stats":   ai.get_stats(),
+                "sim": engine.get_state(),
             }
         except Exception:
             log.exception("slow_loop error")
@@ -187,9 +163,7 @@ def push_loop():
 def shutdown(*_):
     _shutdown.set()
     x18.stop()
-    mic.stop()
     engine.stop()
-    ai.stop()
     sys.exit(0)
 
 
@@ -197,16 +171,13 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    print("Church AI Sound Technician")
+    print("Church Sound Technician")
     print(f"  Mixer   → {'ready' if x18.connected else 'connecting'}")
     print(f"  Web UI  → http://localhost:{WEB_PORT}")
-    print(f"  Mode    → SIMULATION (read only)")
     print()
 
     x18.start()
-    mic.start()
     engine.start()
-    ai.start()
 
     threading.Thread(target=_slow_loop, daemon=True).start()
     threading.Thread(target=push_loop, daemon=True).start()

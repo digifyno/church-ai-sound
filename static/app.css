@@ -121,29 +121,7 @@ main{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 72px - 160
 .sr-delta.pos{color:#80d080} .sr-delta.neg{color:#d08060} .sr-delta.zero{color:var(--muted)}
 .sim-empty{color:var(--muted);font-size:10px;text-align:center;padding:8px 0}
 
-/* ── AI ── */
-.ai{background:#0e1220;border:1px solid var(--accent);border-radius:8px;padding:12px;position:relative;overflow:hidden}
-.ai::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
-.ai-h{display:flex;align-items:center;gap:6px;margin-bottom:8px}
-.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 2s infinite}
-.ai-lbl{font-size:9px;color:var(--accent);font-weight:700;letter-spacing:1px}
-#ai-text{font-size:11px;line-height:1.6;min-height:44px}
-.ai-ts{font-size:9px;color:var(--muted);margin-top:6px}
-.ai-stats{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap}
-.ai-stat{font-size:9px;color:var(--muted)}
-.ai-stat-val{color:var(--text)}
-.ai-stat-cost{color:var(--yellow)}
 .health-label{color:var(--muted)}
-
-/* ── Room mic ── */
-.room-db{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin:4px 0}
-.room-db.ok{color:var(--green)} .room-db.hot{color:var(--yellow)} .room-db.loud{color:var(--red)}
-.r-bar-bg{height:6px;background:#080a0f;border-radius:3px;overflow:hidden;margin-bottom:6px}
-.r-bar{height:100%;width:0%;border-radius:3px;transition:width .1s}
-.sp{display:inline-block;padding:2px 7px;border-radius:14px;font-size:9px;font-weight:700}
-.sp.on{background:#0e2818;color:var(--green)} .sp.off{background:#12161e;color:var(--muted)}
-.freqs{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
-.ftag{padding:2px 5px;border-radius:3px;font-size:9px;background:#2a1808;color:#e08040;border:1px solid #3a2010}
 
 /* ── Stats ── */
 .st{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px}

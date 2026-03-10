@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-AI-powered sound technician for church services using a Behringer X-AIR X18 mixer.
-Communicates via OSC (Open Sound Control) over UDP. Monitors levels, analyzes the
-mix with Claude AI, and can auto-adjust faders.
+Script-based sound technician for church services using a Behringer X-AIR X18 mixer.
+Communicates via OSC (Open Sound Control) over UDP. Monitors levels and can
+auto-adjust faders using rule-based scripts.
 
 ## Running
 
@@ -35,7 +35,7 @@ Coverage:
 
 Safety-critical paths tested: fader ceiling enforcement, hold-zone logic, runaway detection.
 
-Requires `.env` with `ANTHROPIC_API_KEY` and `FLASK_SECRET_KEY` (see `.env.example`). Optional env vars: `MIXER_IP` (default `192.168.8.18`), `MIXER_PORT` (default `10024`), `CORS_ORIGINS`. Install deps:
+Requires `.env` with `FLASK_SECRET_KEY` (see `.env.example`). Optional env vars: `MIXER_IP` (default `192.168.8.18`), `MIXER_PORT` (default `10024`), `CORS_ORIGINS`. Install deps:
 ```bash
 pip3 install -r requirements.txt
 ```
@@ -43,8 +43,8 @@ pip3 install -r requirements.txt
 ## Architecture
 
 All components are **thread-safe** (lock-protected shared state) and communicate
-through snapshot reads — no blocking, no shared mutable references. All engine
-classes (`X18Client`, `MixerEngine`, `AIEngine`) use a `threading.Event`
+through snapshot reads — no blocking, no shared mutable references. Engine
+classes (`X18Client`, `MixerEngine`) use a `threading.Event`
 (`_stop_event`) alongside a `_running` bool for clean, fast shutdown — loop
 sleeps use `_stop_event.wait(interval)` so they exit immediately on stop.
 
@@ -52,10 +52,10 @@ sleeps use `_stop_event.wait(interval)` so they exit immediately on stop.
 ```
 X18 mixer (UDP 10024) ←→ x18.py (meters + faders)
                               ↓ get_snapshot()
-Room mic → room_mic.py ──→ app.py (push_loop, 7Hz SocketIO) → browser
-                              ↑ get_state() / get_suggestion()
+                         app.py (push_loop, 20Hz SocketIO) → browser
+                              ↑ get_state()
               mixer_engine.py (simulation) ← x18 snapshot
-              ai_engine.py (Claude Haiku, 15s cycle) ← all snapshots
+              automix.py (script-based fader control) ← x18 snapshot
 ```
 
 **Key modules:**
@@ -63,7 +63,7 @@ Room mic → room_mic.py ──→ app.py (push_loop, 7Hz SocketIO) → browser
 - `x18.py` — X18Client: meter subscription, fader/name/mute reads, write commands.
 - `config.py` — All hardcoded values (mixer IP, channel roles, target levels).
 - `mixer_engine.py` — Computes `output = input_meter + fader_db`, compares to role targets.
-- `ai_engine.py` — Claude API calls with full cost logging to `ai_log.jsonl` (created mode 0o600).
+- `automix.py` — Script-based auto-mix: adjusts faders based on role targets and input levels.
 
 ## OSC Protocol Gotchas
 
@@ -79,9 +79,6 @@ Room mic → room_mic.py ──→ app.py (push_loop, 7Hz SocketIO) → browser
 - **`_query()` verifies response address.** The helper discards any response
   whose address doesn't match the queried address, preventing stale or
   mismatched packets from being silently accepted as valid replies.
-- **Log files use restricted permissions.** `ai_log.jsonl` and
-  `automix_log.jsonl` are created via `os.open(..., 0o600)` so they are
-  owner-readable only — never world-readable.
 
 ## Simulation vs Live
 

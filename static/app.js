@@ -6,7 +6,6 @@ function esc(s) {
     .replace(/"/g, '&quot;');
 }
 const S = io();
-let aiTs = null;
 
 S.on("state", d => {
   $("clock").textContent = d.time;
@@ -14,9 +13,6 @@ S.on("state", d => {
   chs(d.channels);
   vMeters(d.channels);
   sim(d.sim);
-  room(d.room);
-  if (d.suggestion) ai(d.suggestion, d.time);
-  if (d.ai_stats) aiStats(d.ai_stats);
   if (d.sim) scene(d.sim);
   modeUpdate(d.live);
 });
@@ -224,43 +220,3 @@ function scene(d) {
   lbl.style.color = h>70?"var(--green)":h>40?"var(--yellow)":"var(--red)";
 }
 
-function room(r) {
-  const avail = r.available !== false;
-  const el = $("r-db");
-  if (!avail) {
-    el.textContent = "Unavailable";
-    el.className = "room-db";
-    el.style.color = "var(--muted)";
-    $("r-bar").style.width = "0%";
-    const sp = $("sp");
-    sp.textContent = "NO MIC";
-    sp.className = "sp off";
-    $("freqs").innerHTML = r.error ? `<span class="ftag" title="${esc(r.error)}">mic error</span>` : "";
-    return;
-  }
-  el.style.color = "";
-  const db = r.db, p = pct(db);
-  el.textContent = db > -90 ? `${db.toFixed(1)} dB` : "— dB";
-  el.className = `room-db ${db>-6?"loud":db>-18?"hot":"ok"}`;
-  const bar = $("r-bar");
-  bar.style.width = `${p}%`;
-  bar.className = `r-bar ${bc(db)}`;
-  const sp = $("sp");
-  sp.textContent = r.speech_detected ? "SPEECH ●" : "SPEECH";
-  sp.className = `sp ${r.speech_detected?"on":"off"}`;
-  $("freqs").innerHTML = (r.dominant_freqs||[]).map(f=>`<span class="ftag">${f} Hz</span>`).join("");
-}
-
-function ai(text, time) {
-  const el = $("ai-text");
-  if (el.textContent !== text) {
-    el.textContent = text;
-    $("ai-ts").textContent = `Updated ${time}`;
-  }
-}
-
-function aiStats(s) {
-  $("ai-req").textContent = s.requests;
-  $("ai-tok").textContent = (s.input_tokens + s.output_tokens).toLocaleString();
-  $("ai-cost").textContent = `$${s.total_cost.toFixed(4)}`;
-}

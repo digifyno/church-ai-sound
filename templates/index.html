@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Church AI Sound — X18</title>
+<title>Church Sound — X18</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <script src="/static/socket.io.min.js"></script>
-<link rel="stylesheet" href="/static/app.css?v=4">
+<link rel="stylesheet" href="/static/app.css?v=6">
 </head>
 <body>
 
 <header>
   <div class="logo">
     <div class="logo-icon">🎚</div>
-    <div><div class="logo-name">Church AI Sound</div><div class="logo-sub">X-AIR X18</div></div>
+    <div><div class="logo-name">Church Sound</div><div class="logo-sub">X-AIR X18</div></div>
   </div>
   <div class="hdr-r">
     <button class="badge b-sim" id="mode-btn">SIMULATION</button>
@@ -49,29 +49,10 @@
 
     <div class="sim">
       <div class="sim-hdr">
-        <div class="sim-title">AI Would Adjust</div>
-        <div class="sim-note">not applied</div>
+        <div class="sim-title">Automix Proposals</div>
+        <div class="sim-note">script-based</div>
       </div>
       <div id="sim"></div>
-    </div>
-
-    <div class="ai">
-      <div class="ai-h"><div class="ai-dot"></div><div class="ai-lbl">AI TECHNICIAN</div></div>
-      <div id="ai-text">Connecting...</div>
-      <div class="ai-ts" id="ai-ts"></div>
-      <div class="ai-stats">
-        <span class="ai-stat">Requests: <span id="ai-req" class="ai-stat-val">0</span></span>
-        <span class="ai-stat">Tokens: <span id="ai-tok" class="ai-stat-val">0</span></span>
-        <span class="ai-stat">Cost: <span id="ai-cost" class="ai-stat-cost">$0.000</span></span>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="stitle">Room Microphone</div>
-      <div class="room-db ok" id="r-db">— dB</div>
-      <div class="r-bar-bg"><div class="r-bar green" id="r-bar"></div></div>
-      <span class="sp off" id="sp">SPEECH</span>
-      <div class="freqs" id="freqs"></div>
     </div>
 
     <div class="card">
@@ -85,6 +66,6 @@
   </div>
 </main>
 
-<script src="/static/app.js?v=4"></script>
+<script src="/static/app.js?v=6"></script>
 </body>
 </html>

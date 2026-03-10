@@ -1,5 +1,5 @@
 """
-Central configuration for Church AI Sound.
+Central configuration for Church Sound.
 """
 
 import os as _os
@@ -44,19 +44,9 @@ MAX_CONSECUTIVE_RAISES = 5    # halt raises after this many cycles without input
 STALE_INPUT_WINDOW     = 5    # cycles to look back for stale-input detection
 STALE_INPUT_BAND_DB    = 1.0  # input must vary more than this (dB) to not be considered stale
 
-MIC_DEVICE   = None     # None = system default mic
-SAMPLE_RATE  = 48000
-
-# AI analysis
-ANALYSIS_INTERVAL   = 15   # seconds between Claude queries
-ANALYSIS_TIMEOUT_SEC = 30  # seconds before API call is abandoned
-
 # Auto-mix
 CYCLE_SEC  = 2.0   # seconds per auto-mix cycle
 HOLD_ZONE  = 1.0   # ±dB: close enough, don't adjust
-
-# Room mic
-BLOCK_SIZE = 4096  # audio capture block size (~85ms at 48 kHz)
 
 # WebSocket CORS — defaults to localhost only; set CORS_ORIGINS env var for LAN access
 # e.g. CORS_ORIGINS=http://192.168.8.100:5050
@@ -79,13 +69,7 @@ if len(SOCKETIO_CORS_ORIGINS) != len(_cors_candidates):
         [o for o in _cors_candidates if not _valid_origin(o)],
     )
 
-# AI cost accounting (Haiku 4.5 pricing, per million tokens)
-AI_MODEL            = "claude-haiku-4-5-20251001"
-AI_LOG_FILE         = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "ai_log.jsonl")
 AUTOMIX_LOG_FILE    = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "automix_log.jsonl")
-AI_PRICE_INPUT      = 0.80   # $0.80 / 1M input tokens
-AI_PRICE_OUTPUT     = 4.00   # $4.00 / 1M output tokens
-MAX_DAILY_COST_USD  = 10.00  # halt AI analysis after $10 in a calendar day (0 = disable AI)
 
 # Auto-mix safety
 FADER_CEIL_DB    = 0.0    # never push a fader above 0 dB
