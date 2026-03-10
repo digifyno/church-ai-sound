@@ -26,6 +26,7 @@ class X18Client:
     def __init__(self):
         self._sock = None
         self._running = False
+        self._stop_event = threading.Event()
         self._thread = None
         self._lock = threading.Lock()
 
@@ -50,6 +51,7 @@ class X18Client:
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._sock.bind(("", 0))     # OS picks a free port
         self._sock.settimeout(0.5)
+        self._stop_event.clear()
         self._running = True
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -58,6 +60,7 @@ class X18Client:
 
     def stop(self):
         self._running = False
+        self._stop_event.set()
         if self._sock:
             self._sock.close()
 
@@ -177,13 +180,15 @@ class X18Client:
 
     def _meta_loop(self):
         """Refresh names/faders/mutes every 30s, independent of receive loop."""
-        time.sleep(1)  # let socket settle
+        if self._stop_event.wait(1):  # let socket settle; returns True if stopping
+            return
         while self._running:
             try:
                 self._read_channel_meta()
             except Exception:
                 log.exception("_meta_loop: channel metadata refresh failed")
-            time.sleep(30)
+            if self._stop_event.wait(30):
+                break
 
     def _run(self):
         last_sub = 0.0

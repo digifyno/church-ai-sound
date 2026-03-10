@@ -25,6 +25,7 @@ class MixerEngine:
         self._x18 = x18_client
         self._lock = threading.Lock()
         self._running = False
+        self._stop_event = threading.Event()
         self._thread = None
 
         self._proposals  = {}
@@ -32,12 +33,14 @@ class MixerEngine:
         self._mix_health = 100
 
     def start(self):
+        self._stop_event.clear()
         self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
 
     def stop(self):
         self._running = False
+        self._stop_event.set()
 
     def get_state(self) -> dict:
         with self._lock:
@@ -138,4 +141,5 @@ class MixerEngine:
             except Exception:
                 log.exception("simulation loop error")
 
-            time.sleep(2.0)
+            if self._stop_event.wait(2.0):
+                break

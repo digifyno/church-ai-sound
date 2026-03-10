@@ -23,6 +23,7 @@ class AIEngine:
         self._suggestion   = "Waiting for first analysis..."
         self._lock         = threading.Lock()
         self._running      = False
+        self._stop_event   = threading.Event()
         self._thread       = None
         self._client       = None
 
@@ -67,18 +68,19 @@ class AIEngine:
             if self._total_cost > 0:
                 log.info("Recovered today's AI cost from log: $%.4f", self._total_cost)
 
+        self._stop_event.clear()
         self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
 
     def stop(self):
         self._running = False
+        self._stop_event.set()
 
     @property
     def running(self) -> bool:
         """True if the AI analysis loop is active."""
-        with self._lock:
-            return self._running
+        return self._running
 
     def get_suggestion(self) -> str:
         with self._lock:
@@ -223,7 +225,8 @@ class AIEngine:
                 if active_count == 0:
                     with self._lock:
                         self._suggestion = "No active channels — mix is silent."
-                    time.sleep(ANALYSIS_INTERVAL)
+                    if self._stop_event.wait(ANALYSIS_INTERVAL):
+                        break
                     continue
 
                 with self._lock:
@@ -233,7 +236,8 @@ class AIEngine:
                         "AI cost budget exceeded ($%.4f >= $%.2f) — analysis paused",
                         self._total_cost, MAX_DAILY_COST_USD,
                     )
-                    time.sleep(ANALYSIS_INTERVAL)
+                    if self._stop_event.wait(ANALYSIS_INTERVAL):
+                        break
                     continue
 
                 text = self._analyze(channels, room, sim)
@@ -243,4 +247,5 @@ class AIEngine:
                 log.exception("AIEngine analysis loop error")
                 with self._lock:
                     self._suggestion = "AI analysis temporarily unavailable."
-            time.sleep(ANALYSIS_INTERVAL)
+            if self._stop_event.wait(ANALYSIS_INTERVAL):
+                break

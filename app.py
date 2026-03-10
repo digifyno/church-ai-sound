@@ -52,6 +52,8 @@ def set_security_headers(response):
     return response
 
 
+_shutdown = threading.Event()
+
 x18    = X18Client()
 mic    = RoomMic()
 engine = MixerEngine(x18)
@@ -83,7 +85,7 @@ def health():
 
 def push_loop():
     """Broadcast state to all connected clients ~7 times/sec."""
-    while True:
+    while not _shutdown.is_set():
         try:
             channels   = x18.get_snapshot()
             room       = mic.get()
@@ -101,10 +103,12 @@ def push_loop():
             })
         except Exception:
             log.exception("push_loop error")
-        time.sleep(0.15)
+        if _shutdown.wait(0.15):
+            break
 
 
 def shutdown(*_):
+    _shutdown.set()
     x18.stop()
     mic.stop()
     engine.stop()
