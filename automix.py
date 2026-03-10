@@ -81,7 +81,11 @@ def restore_backup(client: X18Client, path=None):
         log.error("Faders NOT restored — manual recovery required.")
         return
     for ch_str, info in backup.items():
-        ch = int(ch_str)
+        try:
+            ch = int(ch_str)
+        except ValueError:
+            log.warning("restore_backup: skipping non-integer key %r", ch_str)
+            continue
         if ch < 1 or ch > 16:
             continue
         client.set_fader(ch, info["fader"])

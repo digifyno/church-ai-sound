@@ -123,6 +123,21 @@ def test_save_and_restore_backup(tmp_path):
     client.set_fader.assert_called_once_with(1, 0.75)
 
 
+def test_restore_backup_non_integer_key(tmp_path):
+    """Non-integer keys in backup (corruption/manual edit) must be skipped with a warning."""
+    path = tmp_path / "backup.json"
+    path.write_text(json.dumps({
+        "aux": {"name": "AUX", "fader": 0.5, "fader_db": -10.0, "on": True},
+        "17.5": {"name": "OVER", "fader": 0.5, "fader_db": -10.0, "on": True},
+        "1": {"name": "VOC", "fader": 0.75, "fader_db": -5.0, "on": True},
+    }))
+    client = MagicMock()
+    with patch("time.sleep"):
+        restore_backup(client, path=str(path))  # must not raise
+    # Only the valid integer channel key "1" should be restored
+    client.set_fader.assert_called_once_with(1, 0.75)
+
+
 def test_restore_backup_corrupted_file(tmp_path):
     path = tmp_path / "backup.json"
     path.write_text("{ not valid json")
