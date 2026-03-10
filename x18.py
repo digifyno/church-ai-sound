@@ -15,8 +15,15 @@ import logging
 import socket
 import threading
 import time
+import unicodedata
 
 log = logging.getLogger(__name__)
+
+
+def _sanitize_name(name: str, max_len: int = 32) -> str:
+    """Strip control characters and limit length of mixer-provided names."""
+    cleaned = ''.join(c for c in name if not unicodedata.category(c).startswith('C'))
+    return cleaned[:max_len]
 
 from config import MIXER_IP, MIXER_PORT, SILENCE_DB
 from osc import build_message, parse_message, parse_meter_blob, fader_to_db
@@ -159,7 +166,7 @@ class X18Client:
                 prefix = f"/ch/{ch:02d}"
                 n = self._query(q_sock, f"{prefix}/config/name", "s")
                 if n is not None:
-                    names[ch] = n
+                    names[ch] = _sanitize_name(n)
                 f = self._query(q_sock, f"{prefix}/mix/fader", "f")
                 if f is not None:
                     faders[ch] = f

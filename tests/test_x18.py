@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from x18 import X18Client
+from x18 import X18Client, _sanitize_name
 
 
 # ── Channel bounds validation ─────────────────────────────────────────────────
@@ -162,3 +162,35 @@ def test_query_returns_none_on_timeout():
 def test_connected_false_before_start():
     client = X18Client()
     assert client.connected is False
+
+
+# ── _sanitize_name ────────────────────────────────────────────────────────────
+
+def test_sanitize_name_normal():
+    assert _sanitize_name("Vocal 1") == "Vocal 1"
+
+
+def test_sanitize_name_strips_ansi_escape():
+    # ESC (\x1b) is a Cc control char and is stripped; the remaining printable
+    # ASCII chars are kept — this is sufficient to prevent terminal injection.
+    assert _sanitize_name("\x1b[31mVocal\x1b[0m") == "[31mVocal[0m"
+
+
+def test_sanitize_name_strips_nul_bytes():
+    assert _sanitize_name("CH\x0001") == "CH01"
+
+
+def test_sanitize_name_strips_other_control_chars():
+    # tab (\t = \x09), newline (\n), carriage return (\r) are all Cc
+    assert _sanitize_name("Na\tme\nHere\r") == "NameHere"
+
+
+def test_sanitize_name_truncates_long_name():
+    long_name = "A" * 100
+    result = _sanitize_name(long_name)
+    assert len(result) == 32
+    assert result == "A" * 32
+
+
+def test_sanitize_name_default_fallback_unchanged():
+    assert _sanitize_name("CH01") == "CH01"
