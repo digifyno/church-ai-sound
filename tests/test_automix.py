@@ -1,3 +1,4 @@
+import json
 import pytest
 from unittest.mock import MagicMock, patch
 from automix import auto_mix_step, save_backup, restore_backup
@@ -128,3 +129,49 @@ def test_restore_backup_corrupted_file(tmp_path):
     client = MagicMock()
     restore_backup(client, path=str(path))  # should not raise
     client.set_fader.assert_not_called()
+
+
+def test_log_fader_change_written_on_adjustment(tmp_path):
+    """
+    log_fader_change is called for each applied fader adjustment, writing a
+    valid JSON line with the expected fields.
+    """
+    log_path = str(tmp_path / "automix_log.jsonl")
+    # Channel 1 is "vocal" with target -18 dB; input=-30, fader=0 → output=-30
+    # which is well below target, so auto_mix_step should lower the fader? No wait:
+    # output = input + fader = -30 + 0 = -30, target = -18 → output < target → raise fader
+    client = FakeClient({1: _ch(input_db=-30.0, fader_db=-10.0)})
+    consecutive = {}
+    history = {}
+    auto_mix_step(client, consecutive, history, log_path=log_path)
+
+    with open(log_path) as f:
+        lines = [l.strip() for l in f if l.strip()]
+    assert len(lines) == 1, "Expected exactly one log entry"
+
+    entry = json.loads(lines[0])
+    assert entry["ch"] == 1
+    assert entry["name"] == "Vocal"
+    assert entry["action"] in ("raise", "lower")
+    assert entry["role"] == "vocal"
+    assert "ts" in entry
+    assert "fader_before_db" in entry
+    assert "fader_after_db" in entry
+    assert "delta_db" in entry
+    assert "input_db" in entry
+    assert "target_db" in entry
+
+
+def test_log_not_written_for_hold(tmp_path):
+    """
+    No log entry is written when the fader is held (already on target).
+    """
+    log_path = str(tmp_path / "automix_log.jsonl")
+    # input=-18, fader=0 → output=-18 = target → hold
+    client = FakeClient({1: _ch(input_db=-18.0, fader_db=0.0)})
+    consecutive = {}
+    history = {}
+    auto_mix_step(client, consecutive, history, log_path=log_path)
+
+    import os
+    assert not os.path.exists(log_path), "Log file must not be created for hold actions"

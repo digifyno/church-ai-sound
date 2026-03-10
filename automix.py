@@ -22,6 +22,7 @@ import os
 import signal
 import sys
 import time
+from datetime import datetime
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,9 +35,19 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 from config import (CHANNEL_ROLES, ROLE_TARGETS, SILENCE_DB, MAX_STEP_DB,
                     MAX_CONSECUTIVE_RAISES, STALE_INPUT_WINDOW, STALE_INPUT_BAND_DB,
-                    CYCLE_SEC, HOLD_ZONE, FADER_CEIL_DB)
+                    CYCLE_SEC, HOLD_ZONE, FADER_CEIL_DB, AUTOMIX_LOG_FILE)
 from osc import fader_to_db, db_to_fader, compute_adjustment
 from x18 import X18Client
+
+
+def log_fader_change(entry: dict, path=None):
+    if path is None:
+        path = AUTOMIX_LOG_FILE
+    try:
+        with open(path, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        log.warning("Failed to write automix log", exc_info=True)
 
 
 def save_backup(client: X18Client, path=None):
@@ -81,7 +92,7 @@ def restore_backup(client: X18Client, path=None):
     print("Faders restored from backup.")
 
 
-def auto_mix_step(client: X18Client, consecutive_raises: dict, input_history: dict) -> list[str]:
+def auto_mix_step(client: X18Client, consecutive_raises: dict, input_history: dict, log_path=None) -> list[str]:
     """One cycle: read state, compute deltas, apply.  Returns log lines."""
     snap = client.get_snapshot()
     actions = []
@@ -154,6 +165,18 @@ def auto_mix_step(client: X18Client, consecutive_raises: dict, input_history: di
             consecutive_raises[ch] = 0  # reset on lower
 
         client.set_fader_db(ch, new_fader_db)
+        log_fader_change({
+            "ts": datetime.now().isoformat(),
+            "ch": ch,
+            "name": info["name"],
+            "action": action,
+            "fader_before_db": round(fader_db, 1),
+            "fader_after_db": round(new_fader_db, 1),
+            "delta_db": round(delta, 1),
+            "input_db": round(input_db, 1),
+            "target_db": target_db,
+            "role": role,
+        }, path=log_path)
         direction = "↑" if action == "raise" else "↓"
         actions.append(
             f"  CH{ch:<2} {info['name']:<12} "
