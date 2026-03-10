@@ -3,6 +3,7 @@ Central configuration for Church AI Sound.
 """
 
 import os as _os
+import urllib.parse as _urlparse
 
 MIXER_IP   = _os.environ.get("MIXER_IP",   "192.168.8.18")
 MIXER_PORT = int(_os.environ.get("MIXER_PORT", "10024"))
@@ -59,8 +60,24 @@ BLOCK_SIZE = 4096  # audio capture block size (~85ms at 48 kHz)
 
 # WebSocket CORS — defaults to localhost only; set CORS_ORIGINS env var for LAN access
 # e.g. CORS_ORIGINS=http://192.168.8.100:5050
+def _valid_origin(o: str) -> bool:
+    try:
+        p = _urlparse.urlparse(o)
+        return p.scheme in ('http', 'https') and bool(p.netloc)
+    except Exception:
+        return False
+
 _cors_raw = _os.environ.get("CORS_ORIGINS", "http://localhost:5050,http://127.0.0.1:5050")
-SOCKETIO_CORS_ORIGINS = [o.strip() for o in _cors_raw.split(",") if o.strip()]
+_cors_candidates = [o.strip() for o in _cors_raw.split(",") if o.strip()]
+SOCKETIO_CORS_ORIGINS = [o for o in _cors_candidates if _valid_origin(o)]
+
+if len(SOCKETIO_CORS_ORIGINS) != len(_cors_candidates):
+    import logging as _logging
+    _logging.getLogger(__name__).warning(
+        "CORS_ORIGINS: %d invalid origin(s) dropped: %s",
+        len(_cors_candidates) - len(SOCKETIO_CORS_ORIGINS),
+        [o for o in _cors_candidates if not _valid_origin(o)],
+    )
 
 # AI cost accounting (Haiku 4.5 pricing, per million tokens)
 AI_MODEL            = "claude-haiku-4-5-20251001"
