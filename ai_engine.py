@@ -45,7 +45,7 @@ class AIEngine:
                         entry = json.loads(line)
                         if entry.get("ts", "").startswith(today_str):
                             total += entry.get("cost_usd", 0.0)
-                    except (json.JSONDecodeError, KeyError):
+                    except json.JSONDecodeError:
                         continue
         except FileNotFoundError:
             pass  # no log yet — first run
@@ -172,6 +172,9 @@ class AIEngine:
             )
             elapsed = time.time() - t0
 
+            if not resp.content:
+                log.warning("AI response has empty content list; model=%s", AI_MODEL)
+                return "AI analysis unavailable (empty response)."
             answer       = resp.content[0].text.strip()
             input_tokens = resp.usage.input_tokens
             output_tokens = resp.usage.output_tokens
